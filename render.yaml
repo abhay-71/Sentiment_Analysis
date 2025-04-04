@@ -1,0 +1,49 @@
+services:
+  # Mock API Service
+  - name: sentiment-mock-api
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app/api/mock_api.py
+    envVars:
+      - key: API_PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.9.0
+
+  # Model API Service
+  - name: sentiment-model-api
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt && python app/models/train_model.py
+    startCommand: python app/api/model_api.py
+    envVars:
+      - key: API_PORT
+        value: 10001
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: API_HOST
+        fromService:
+          name: sentiment-mock-api
+          type: web
+          property: host
+
+  # Dashboard Service
+  - name: sentiment-dashboard
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app/dashboard/dashboard.py
+    envVars:
+      - key: API_HOST
+        fromService:
+          name: sentiment-mock-api
+          type: web
+          property: host
+      - key: MODEL_API_HOST
+        fromService:
+          name: sentiment-model-api
+          type: web
+          property: host
+      - key: PYTHON_VERSION
+        value: 3.9.0 
