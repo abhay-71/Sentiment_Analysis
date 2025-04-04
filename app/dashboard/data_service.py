@@ -2,6 +2,7 @@
 Data Service for Dashboard
 
 This module provides functions to fetch and process data for the dashboard.
+Supports multiple sentiment model types: synthetic, twitter, and hybrid.
 """
 import os
 import sys
@@ -92,25 +93,50 @@ def get_sentiment_statistics():
         logger.error(f"Error retrieving sentiment statistics: {str(e)}")
         return {'positive': 0, 'neutral': 0, 'negative': 0, 'total': 0}
 
-def predict_sentiment(text):
+def get_available_models():
+    """
+    Get available sentiment models from the API.
+    
+    Returns:
+        list: List of available model types
+    """
+    try:
+        response = requests.get(f"{MODEL_API_URL.rstrip('/predict')}/models")
+        response.raise_for_status()
+        result = response.json()
+        logger.info(f"Available models: {result.get('models', [])}")
+        return result.get('models', [])
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error getting available models: {str(e)}")
+        # Default to synthetic model if can't get list
+        return ["synthetic"]
+
+def predict_sentiment(text, model_type=None):
     """
     Get sentiment prediction for a text using the model API.
     
     Args:
         text (str): Text to analyze
+        model_type (str, optional): Type of model to use
         
     Returns:
         dict: Prediction result
     """
     try:
+        data = {"text": text}
+        
+        # Add model_type if specified
+        if model_type:
+            data["model_type"] = model_type
+            
         response = requests.post(
             f"{MODEL_API_URL}",
-            json={"text": text},
+            json=data,
             headers={"Content-Type": "application/json"}
         )
         response.raise_for_status()
         result = response.json()
-        logger.info(f"Received prediction for text: {result}")
+        logger.info(f"Received prediction for text using {model_type or 'default'} model: {result}")
         return result
     except requests.exceptions.RequestException as e:
         logger.error(f"Error getting prediction: {str(e)}")
@@ -118,7 +144,38 @@ def predict_sentiment(text):
             "sentiment": "neutral",
             "sentiment_value": 0,
             "confidence": 0.0,
-            "text": text
+            "text": text,
+            "model_type": model_type or "unknown",
+            "error": str(e)
+        }
+
+def compare_models(text):
+    """
+    Compare sentiment predictions from all available models.
+    
+    Args:
+        text (str): Text to analyze
+        
+    Returns:
+        dict: Comparison results from all models
+    """
+    try:
+        response = requests.post(
+            f"{MODEL_API_URL.rstrip('/predict')}/compare",
+            json={"text": text},
+            headers={"Content-Type": "application/json"}
+        )
+        response.raise_for_status()
+        result = response.json()
+        logger.info(f"Received model comparison for text")
+        return result
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error comparing models: {str(e)}")
+        return {
+            "text": text,
+            "models": {},
+            "available_models": [],
+            "error": str(e)
         }
 
 def get_sentiment_over_time(days=30):
