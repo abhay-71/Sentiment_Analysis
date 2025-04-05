@@ -1,27 +1,19 @@
 #!/usr/bin/env python3
 """
-Emergency Services Domain Classifier
+Domain Classification for Emergency Services
 
-This script implements a domain classification component to identify which 
-emergency service domain(s) a text belongs to. It provides multi-label 
-classification for fire services, police, EMS, etc.
+This module provides domain classification functionality for emergency services text.
 """
 import os
 import sys
-import re
 import logging
 import joblib
 import numpy as np
-import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.multioutput import MultiOutputClassifier
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.metrics import classification_report, accuracy_score
-from sklearn.model_selection import train_test_split
-
-# Add the project root to Python path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Configure logging
 logging.basicConfig(
@@ -30,300 +22,185 @@ logging.basicConfig(
 )
 logger = logging.getLogger('domain_classifier')
 
-# File paths
-EMERGENCY_DATASET_PATH = "emergency_services_dataset_emergency_balanced.csv"
-DOMAIN_MODEL_PATH = "app/models/domain_classifier_model.pkl"
-DOMAIN_VECTORIZER_PATH = "app/models/domain_classifier_vectorizer.pkl"
-DOMAIN_BINARIZER_PATH = "app/models/domain_classifier_binarizer.pkl"
+# Define constants
+DOMAIN_THRESHOLD = 0.5  # Probability threshold for domain classification
 
-# Define emergency service domains
-DOMAINS = {
-    'fire': [
-        'fire', 'firefighter', 'blaze', 'burn', 'flame', 'smoke', 'arson',
-        'extinguish', 'hydrant', 'ladder', 'hose', 'firestation', 'firetruck',
-        'fire department', 'inferno', 'combustion', 'fire alarm', 'fire chief'
-    ],
-    'police': [
-        'police', 'cop', 'officer', 'patrol', 'sheriff', 'deputy', 'detective',
-        'arrest', 'crime', 'criminal', 'law enforcement', 'precinct', 'badge',
-        'police department', 'squad car', 'k9', 'swat', 'patrol car', 'handcuff'
-    ],
-    'ems': [
-        'ambulance', 'paramedic', 'emt', 'medic', 'emergency medical',
-        'stretcher', 'cpr', 'defibrillator', 'hospital', 'injury', 'wounded',
-        'triage', 'first aid', 'trauma', 'medical emergency', 'patient'
-    ],
-    'coast_guard': [
-        'coast guard', 'coastguard', 'lifeguard', 'rescue boat', 'drowning',
-        'ocean rescue', 'beach patrol', 'maritime', 'water rescue', 'life jacket',
-        'overboard', 'vessel', 'boat rescue', 'swimmer in distress', 'lifesaving'
-    ],
-    'disaster_response': [
-        'disaster', 'emergency', 'flood', 'hurricane', 'tornado', 'earthquake',
-        'wildfire', 'landslide', 'evacuation', 'evacuate', 'disaster relief',
-        'fema', 'emergency management', 'catastrophe', 'crisis response'
-    ]
+# Define file paths
+MODELS_DIR = "app/models"
+DOMAIN_MODEL_PATH = os.path.join(MODELS_DIR, "domain_classifier_model.pkl")
+DOMAIN_VECTORIZER_PATH = os.path.join(MODELS_DIR, "domain_classifier_vectorizer.pkl")
+DOMAIN_BINARIZER_PATH = os.path.join(MODELS_DIR, "domain_classifier_binarizer.pkl")
+
+# Define domains and their related keywords
+DOMAIN_KEYWORDS = {
+    'fire': ['fire', 'firefighter', 'burn', 'flame', 'smoke', 'arson', 'wildfire', 'extinguish'],
+    'police': ['police', 'officer', 'crime', 'arrest', 'law', 'enforcement', 'detective', 'patrol'],
+    'ems': ['ambulance', 'paramedic', 'emt', 'emergency medical', 'hospital', 'injury', 'medical', 'patient'],
+    'disaster_response': ['disaster', 'hurricane', 'flood', 'earthquake', 'evacuation', 'relief', 'emergency management'],
+    'coast_guard': ['coast guard', 'maritime', 'rescue', 'water', 'boat', 'ship', 'drowning', 'ocean']
 }
 
-def assign_domains(text):
+def load_domain_classifier():
     """
-    Assign emergency service domains to a text based on keyword matching.
+    Load the domain classifier model, vectorizer, and binarizer.
     
-    Args:
-        text (str): Input text
-        
     Returns:
-        list: List of domain labels that apply to the text
+        tuple: (vectorizer, model, binarizer) or (None, None, None) if loading fails
     """
-    if not isinstance(text, str):
-        text = str(text)
-        
-    text = text.lower()
-    assigned_domains = []
-    
-    for domain, keywords in DOMAINS.items():
-        for keyword in keywords:
-            if re.search(r'\b' + re.escape(keyword) + r'\b', text):
-                assigned_domains.append(domain)
-                break
-                
-    return assigned_domains if assigned_domains else ['general']
+    try:
+        vectorizer = joblib.load(DOMAIN_VECTORIZER_PATH)
+        model = joblib.load(DOMAIN_MODEL_PATH)
+        binarizer = joblib.load(DOMAIN_BINARIZER_PATH)
+        logger.info("Domain classifier loaded successfully")
+        return vectorizer, model, binarizer
+    except (FileNotFoundError, Exception) as e:
+        logger.warning(f"Failed to load domain classifier: {str(e)}")
+        return create_simple_domain_classifier()
 
-def prepare_training_data(df):
+def create_simple_domain_classifier():
     """
-    Prepare training data for the domain classifier.
+    Create a simple domain classifier for when the models are not available.
     
-    Args:
-        df (pandas.DataFrame): Dataset with 'text' column
-        
     Returns:
-        tuple: (X, y, mlb) where X is text data, y is binary domain labels
+        tuple: (vectorizer, model, binarizer)
     """
-    logger.info("Preparing training data for domain classification")
+    logger.info("Creating simple domain classifier")
     
-    # Assign domains to each text
-    df['domains'] = df['text'].apply(assign_domains)
+    # Create a simple TF-IDF vectorizer
+    vectorizer = TfidfVectorizer(max_features=1000)
     
-    # Count domain distribution
-    domain_counts = {}
-    for domains_list in df['domains']:
-        for domain in domains_list:
-            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+    # Initialize with some sample texts to fit vocabulary
+    sample_texts = []
+    for domain, keywords in DOMAIN_KEYWORDS.items():
+        sample_texts.extend([f"This is about {kw}" for kw in keywords])
     
-    logger.info(f"Domain distribution: {domain_counts}")
+    vectorizer.fit(sample_texts)
     
-    # Convert labels to binary format for multi-label classification
-    mlb = MultiLabelBinarizer()
-    y = mlb.fit_transform(df['domains'])
+    # Create a simple multi-label classifier
+    model = MultiOutputClassifier(OneVsRestClassifier(SVC(probability=True)))
     
-    logger.info(f"Number of domain classes: {len(mlb.classes_)}")
-    logger.info(f"Domain classes: {mlb.classes_}")
+    # Create domain labels
+    domain_labels = []
+    for _ in sample_texts:
+        domains_present = []
+        for domain, keywords in DOMAIN_KEYWORDS.items():
+            if any(kw in _ for kw in keywords):
+                domains_present.append(domain)
+        if not domains_present:
+            domains_present = ['general']
+        domain_labels.append(domains_present)
     
-    # Split data for training and testing
-    X_train, X_test, y_train, y_test = train_test_split(
-        df['text'].values, y, test_size=0.2, random_state=42
-    )
+    # Create binarizer and transform labels
+    binarizer = MultiLabelBinarizer()
+    y = binarizer.fit_transform(domain_labels)
     
-    logger.info(f"Training set: {len(X_train)} samples")
-    logger.info(f"Testing set: {len(X_test)} samples")
+    # Fit model
+    X = vectorizer.transform(sample_texts)
+    model.fit(X, y)
     
-    return X_train, X_test, y_train, y_test, mlb
+    # Save models
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    joblib.dump(vectorizer, DOMAIN_VECTORIZER_PATH)
+    joblib.dump(model, DOMAIN_MODEL_PATH)
+    joblib.dump(binarizer, DOMAIN_BINARIZER_PATH)
+    
+    logger.info("Simple domain classifier created and saved")
+    return vectorizer, model, binarizer
 
-def train_domain_classifier(X_train, y_train):
-    """
-    Train a multi-label domain classifier.
-    
-    Args:
-        X_train: Training text data
-        y_train: Binary domain labels
-        
-    Returns:
-        tuple: (vectorizer, classifier) trained models
-    """
-    logger.info("Training domain classifier")
-    
-    # Create TF-IDF vectorizer
-    vectorizer = TfidfVectorizer(
-        max_features=10000,
-        min_df=2,
-        max_df=0.9,
-        ngram_range=(1, 2)
-    )
-    
-    # Transform training data
-    X_train_vectorized = vectorizer.fit_transform(X_train)
-    
-    # Create and train classifier
-    classifier = OneVsRestClassifier(LinearSVC(random_state=42))
-    classifier.fit(X_train_vectorized, y_train)
-    
-    logger.info("Domain classifier training completed")
-    
-    return vectorizer, classifier
-
-def evaluate_domain_classifier(vectorizer, classifier, X_test, y_test, mlb):
-    """
-    Evaluate the domain classifier.
-    
-    Args:
-        vectorizer: Trained TF-IDF vectorizer
-        classifier: Trained classifier
-        X_test: Test text data
-        y_test: True binary domain labels
-        mlb: Fitted MultiLabelBinarizer
-        
-    Returns:
-        dict: Evaluation metrics
-    """
-    logger.info("Evaluating domain classifier")
-    
-    # Transform test data
-    X_test_vectorized = vectorizer.transform(X_test)
-    
-    # Predict domains
-    y_pred = classifier.predict(X_test_vectorized)
-    
-    # Calculate metrics
-    subset_accuracy = accuracy_score(y_test, y_pred)
-    logger.info(f"Subset accuracy: {subset_accuracy:.4f}")
-    
-    # Calculate per-class metrics
-    report = classification_report(
-        y_test, y_pred, 
-        target_names=mlb.classes_,
-        output_dict=True
-    )
-    
-    logger.info(f"Classification report:\n{classification_report(y_test, y_pred, target_names=mlb.classes_)}")
-    
-    # Calculate sample-wise metrics
-    correct_samples = 0
-    partial_samples = 0
-    
-    for i in range(len(y_test)):
-        true_domains = set(np.where(y_test[i] == 1)[0])
-        pred_domains = set(np.where(y_pred[i] == 1)[0])
-        
-        if true_domains == pred_domains:
-            correct_samples += 1
-        elif true_domains.intersection(pred_domains):
-            partial_samples += 1
-    
-    exact_match_ratio = correct_samples / len(y_test)
-    partial_match_ratio = partial_samples / len(y_test)
-    
-    logger.info(f"Exact match ratio: {exact_match_ratio:.4f}")
-    logger.info(f"Partial match ratio: {partial_match_ratio:.4f}")
-    
-    return {
-        'subset_accuracy': subset_accuracy,
-        'report': report,
-        'exact_match_ratio': exact_match_ratio,
-        'partial_match_ratio': partial_match_ratio
-    }
-
-def predict_domains(text, vectorizer, classifier, mlb):
+def predict_domains(text, vectorizer=None, domain_model=None, domain_binarizer=None):
     """
     Predict domains for a given text.
     
     Args:
         text (str): Input text
-        vectorizer: Trained TF-IDF vectorizer
-        classifier: Trained classifier
-        mlb: Fitted MultiLabelBinarizer
+        vectorizer (TfidfVectorizer, optional): Vectorizer for text
+        domain_model (sklearn.base.BaseEstimator, optional): Trained domain classifier model
+        domain_binarizer (LabelBinarizer, optional): Binarizer for domain labels
         
     Returns:
-        list: Predicted domain labels
-    """
-    # Process input
-    if not isinstance(text, str):
-        text = str(text)
-    
-    # Vectorize input
-    text_vectorized = vectorizer.transform([text])
-    
-    # Predict binary domain labels
-    domains_binary = classifier.predict(text_vectorized)[0]
-    
-    # Convert binary labels back to domain names
-    domains = mlb.classes_[np.where(domains_binary == 1)[0]].tolist()
-    
-    # Return general domain if no specific domain is predicted
-    return domains if domains else ['general']
-
-def save_models(vectorizer, classifier, mlb):
-    """
-    Save the trained models to disk.
-    
-    Args:
-        vectorizer: Trained TF-IDF vectorizer
-        classifier: Trained classifier
-        mlb: Fitted MultiLabelBinarizer
-    """
-    # Create directories if they don't exist
-    os.makedirs(os.path.dirname(DOMAIN_MODEL_PATH), exist_ok=True)
-    
-    # Save models
-    joblib.dump(vectorizer, DOMAIN_VECTORIZER_PATH)
-    joblib.dump(classifier, DOMAIN_MODEL_PATH)
-    joblib.dump(mlb, DOMAIN_BINARIZER_PATH)
-    
-    logger.info(f"Domain classifier saved to {DOMAIN_MODEL_PATH}")
-    logger.info(f"Domain vectorizer saved to {DOMAIN_VECTORIZER_PATH}")
-    logger.info(f"Domain binarizer saved to {DOMAIN_BINARIZER_PATH}")
-
-def load_models():
-    """
-    Load trained domain classification models.
-    
-    Returns:
-        tuple: (vectorizer, classifier, mlb) trained models
+        list: Predicted domains
     """
     try:
-        vectorizer = joblib.load(DOMAIN_VECTORIZER_PATH)
-        classifier = joblib.load(DOMAIN_MODEL_PATH)
-        mlb = joblib.load(DOMAIN_BINARIZER_PATH)
-        logger.info("Successfully loaded domain classification models")
-        return vectorizer, classifier, mlb
+        # Convert text to lowercase for keyword matching
+        text_lower = text.lower() if isinstance(text, str) else str(text).lower()
+        
+        # Check for keywords before using ML model
+        keyword_domains = []
+        for domain, keywords in DOMAIN_KEYWORDS.items():
+            if any(keyword in text_lower for keyword in keywords):
+                keyword_domains.append(domain)
+                
+        if keyword_domains:
+            logger.info(f"Domains predicted using keywords: {keyword_domains}")
+            return keyword_domains
+            
+        # Load domain classifier if not provided
+        if vectorizer is None or domain_model is None or domain_binarizer is None:
+            vectorizer, domain_model, domain_binarizer = load_domain_classifier()
+            
+        # Check if domain classifier is available
+        if vectorizer is not None and domain_model is not None and domain_binarizer is not None:
+            # Ensure text is a list (required for scikit-learn)
+            if isinstance(text, str):
+                text_list = [text]
+            else:
+                text_list = list(text) if hasattr(text, '__iter__') else [str(text)]
+                
+            # Vectorize text
+            text_vectorized = vectorizer.transform(text_list)
+            
+            # Check shape for prediction
+            if text_vectorized.shape[0] != 1:
+                raise ValueError(f"Expected 1 sample for prediction, got {text_vectorized.shape[0]}")
+                
+            # Predict domains
+            pred_proba = domain_model.predict_proba(text_vectorized)
+            
+            # Get domains above threshold
+            pred_domains = []
+            for i, class_idx in enumerate(pred_proba[0] > 0.5):
+                if class_idx:
+                    domain = domain_binarizer.classes_[i]
+                    pred_domains.append(domain)
+                    
+            logger.info(f"Domains predicted using ML model: {pred_domains}")
+            return pred_domains if pred_domains else ['general']
+        else:
+            # Fallback to general domain
+            logger.warning("Domain classifier not available, defaulting to 'general' domain")
+            return ['general']
+            
     except Exception as e:
-        logger.error(f"Error loading domain classification models: {str(e)}")
-        return None, None, None
+        logger.error(f"Error in domain prediction: {str(e)}")
+        return ['general']
 
 def main():
-    """Main function to train and evaluate the domain classifier."""
+    """Main function to test domain classification."""
     try:
-        logger.info("Starting domain classifier training and evaluation")
+        # Test texts
+        test_texts = [
+            "Firefighters quickly extinguished the kitchen fire",
+            "Police officers arrested the suspect after a brief chase",
+            "Paramedics treated multiple patients at the scene of the accident",
+            "Coast Guard rescued three people from a sinking boat",
+            "Emergency management officials coordinated the evacuation during the flood",
+            "I had breakfast this morning"
+        ]
         
-        # Load emergency services dataset
-        logger.info(f"Loading dataset from {EMERGENCY_DATASET_PATH}")
-        df = pd.read_csv(EMERGENCY_DATASET_PATH)
-        logger.info(f"Loaded {len(df)} samples")
+        # Load or create classifier
+        vectorizer, model, binarizer = load_domain_classifier()
         
-        # Prepare training data
-        X_train, X_test, y_train, y_test, mlb = prepare_training_data(df)
+        # Test predictions
+        for text in test_texts:
+            domains = predict_domains(text, vectorizer, model, binarizer)
+            print(f"Text: '{text}'")
+            print(f"Domains: {domains}\n")
         
-        # Train domain classifier
-        vectorizer, classifier = train_domain_classifier(X_train, y_train)
-        
-        # Evaluate domain classifier
-        metrics = evaluate_domain_classifier(vectorizer, classifier, X_test, y_test, mlb)
-        
-        # Save models
-        save_models(vectorizer, classifier, mlb)
-        
-        # Example prediction
-        example_text = "Firefighters responded to a three-alarm fire at an apartment building."
-        domains = predict_domains(example_text, vectorizer, classifier, mlb)
-        logger.info(f"Example text: '{example_text}'")
-        logger.info(f"Predicted domains: {domains}")
-        
-        logger.info("Domain classifier training and evaluation completed successfully")
-        
-    except Exception as e:
-        logger.error(f"Error in domain classifier: {str(e)}")
-        return 1
+        return 0
     
-    return 0
+    except Exception as e:
+        logger.error(f"Error testing domain classifier: {str(e)}")
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main()) 

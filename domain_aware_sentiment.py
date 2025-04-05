@@ -39,7 +39,7 @@ DOMAIN_BINARIZER_PATH = os.path.join(MODELS_DIR, "domain_classifier_binarizer.pk
 DOMAIN_AWARE_MODEL_PATH = os.path.join(MODELS_DIR, "domain_aware_sentiment_model.pkl")
 
 # Define domains and their related keywords
-DOMAINS = {
+DOMAIN_KEYWORDS = {
     'fire': ['fire', 'firefighter', 'burn', 'flame', 'smoke', 'arson', 'wildfire', 'extinguish'],
     'police': ['police', 'officer', 'crime', 'arrest', 'law', 'enforcement', 'detective', 'patrol'],
     'ems': ['ambulance', 'paramedic', 'emt', 'emergency medical', 'hospital', 'injury', 'medical', 'patient'],
@@ -78,20 +78,20 @@ def assign_domains(df, text_column='text'):
     logger.info("Assigning domains to tweets")
     
     # Initialize domain columns with 0
-    for domain in DOMAINS:
+    for domain in DOMAIN_KEYWORDS:
         df[domain] = 0
     
     # Convert text to lowercase for case-insensitive matching
     df['text_lower'] = df[text_column].str.lower()
     
     # Assign domains based on keyword presence
-    for domain, keywords in DOMAINS.items():
+    for domain, keywords in DOMAIN_KEYWORDS.items():
         for keyword in keywords:
             df.loc[df['text_lower'].str.contains(keyword, na=False), domain] = 1
     
     # Create a multi-label domain column
     df['domains'] = df.apply(
-        lambda row: [domain for domain in DOMAINS if row[domain] == 1],
+        lambda row: [domain for domain in DOMAIN_KEYWORDS if row[domain] == 1],
         axis=1
     )
     
@@ -202,6 +202,94 @@ def predict_domains(text, vectorizer, model, binarizer):
     # Return general domain if no specific domain is predicted
     return pred_domains if pred_domains else ['general']
 
+def predict_domain_aware_sentiment(text):
+    """
+    Predict sentiment with domain awareness for a given text.
+    This function is designed to be called from the API.
+    
+    Args:
+        text (str): Input text
+        
+    Returns:
+        dict: Prediction result including sentiment, confidence, and domains
+    """
+    try:
+        # Ensure text is a string
+        if not isinstance(text, str):
+            text = str(text)
+            
+        # Import domain classifier module only when needed
+        try:
+            from domain_classifier import predict_domains as domain_predict
+            domain_classifier_available = True
+        except ImportError:
+            domain_classifier_available = False
+            logger.warning("Domain classifier module not available, using simple keyword matching")
+        
+        # Get domains for the text
+        if domain_classifier_available:
+            domains = domain_predict(text)
+        else:
+            # Simple keyword matching fallback
+            domains = []
+            text_lower = text.lower()
+            for domain, keywords in DOMAIN_KEYWORDS.items():
+                if any(keyword in text_lower for keyword in keywords):
+                    domains.append(domain)
+            if not domains:
+                domains = ["general"]
+        
+        # Create domain-enriched text
+        text_with_domain = f"{text} {' '.join(domains)}"
+        
+        # Prepare text as a list (required format for sklearn)
+        text_list = [text_with_domain]
+        
+        # Load the domain-aware sentiment model - no fallback to simple model
+        if os.path.exists(DOMAIN_AWARE_MODEL_PATH):
+            sentiment_model = joblib.load(DOMAIN_AWARE_MODEL_PATH)
+            logger.info("Loaded domain-aware sentiment model")
+            
+            # Use the pipeline to predict sentiment
+            sentiment_value = sentiment_model.predict(text_list)[0]
+            sentiment_proba = sentiment_model.predict_proba(text_list)[0]
+            confidence = float(np.max(sentiment_proba))
+            logger.info(f"Model prediction successful: {sentiment_value} with confidence {confidence:.2f}")
+        else:
+            # If model doesn't exist, return an error rather than creating a simple model
+            logger.error(f"Domain-aware model not found at {DOMAIN_AWARE_MODEL_PATH}. Pre-trained model required.")
+            raise FileNotFoundError(f"Domain-aware sentiment model not found at {DOMAIN_AWARE_MODEL_PATH}")
+                
+        # Map sentiment value to label
+        sentiment_map = {-1: "negative", 0: "neutral", 1: "positive"}
+        sentiment_label = sentiment_map.get(int(sentiment_value), "neutral")
+        
+        # Return structured prediction
+        result = {
+            "text": text,
+            "sentiment": sentiment_label,
+            "sentiment_value": int(sentiment_value),
+            "confidence": float(confidence),
+            "domains": domains,
+            "model_type": "domain_aware"
+        }
+        
+        logger.info(f"Domain-aware sentiment prediction: {sentiment_label} (confidence: {confidence:.2f})")
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error in domain-aware sentiment prediction: {str(e)}")
+        # Return a default response with error information
+        return {
+            "text": text,
+            "sentiment": "neutral",
+            "sentiment_value": 0,
+            "confidence": 0.33,
+            "domains": ["general"],
+            "model_type": "domain_aware",
+            "error": str(e)
+        }
+
 def train_domain_aware_sentiment_model(df, text_column='text', sentiment_column='sentiment'):
     """
     Train domain-aware sentiment models.
@@ -278,33 +366,6 @@ def train_domain_aware_sentiment_model(df, text_column='text', sentiment_column=
     
     return domain_aware_pipeline
 
-def predict_sentiment(text, domain_vectorizer, domain_model, domain_binarizer, sentiment_model):
-    """
-    Predict sentiment using domain-aware model.
-    
-    Args:
-        text (str): Input text
-        domain_vectorizer, domain_model, domain_binarizer: Domain classifier components
-        sentiment_model: Domain-aware sentiment model
-        
-    Returns:
-        tuple: (sentiment, confidence, domains)
-    """
-    # Predict domains
-    domains = predict_domains(text, domain_vectorizer, domain_model, domain_binarizer)
-    
-    # Create domain-enriched text
-    text_with_domain = f"{text} {' '.join(domains)}"
-    
-    # Predict sentiment
-    sentiment_proba = sentiment_model.predict_proba([text_with_domain])[0]
-    sentiment = sentiment_model.predict([text_with_domain])[0]
-    
-    # Get confidence
-    confidence = sentiment_proba.max()
-    
-    return int(sentiment), float(confidence), domains
-
 def evaluate_model(df, domain_vectorizer, domain_model, domain_binarizer, sentiment_model, 
                   text_column='text', sentiment_column='sentiment'):
     """
@@ -328,16 +389,15 @@ def evaluate_model(df, domain_vectorizer, domain_model, domain_binarizer, sentim
         text = row[text_column]
         true_sentiment = row[sentiment_column]
         
-        pred_sentiment, confidence, domains = predict_sentiment(
-            text, domain_vectorizer, domain_model, domain_binarizer, sentiment_model
-        )
+        # Use the prediction function that returns a dictionary
+        result = predict_domain_aware_sentiment(text)
         
         predictions.append({
             'text': text,
             'true_sentiment': true_sentiment,
-            'predicted_sentiment': pred_sentiment,
-            'confidence': confidence,
-            'domains': domains
+            'predicted_sentiment': result['sentiment_value'],
+            'confidence': result['confidence'],
+            'domains': result['domains']
         })
     
     # Convert to DataFrame for analysis

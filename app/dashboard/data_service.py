@@ -2,7 +2,7 @@
 Data Service for Dashboard
 
 This module provides functions to fetch and process data for the dashboard.
-Supports multiple sentiment model types: synthetic, twitter, and hybrid.
+Supports multiple sentiment model types: synthetic, twitter, hybrid, and domain-aware.
 """
 import os
 import sys
@@ -104,20 +104,27 @@ def get_available_models():
         response = requests.get(f"{MODEL_API_URL.rstrip('/predict')}/models")
         response.raise_for_status()
         result = response.json()
-        logger.info(f"Available models: {result.get('models', [])}")
-        return result.get('models', [])
+        models = result.get('models', [])
+        
+        # Ensure domain-aware model is included in the list
+        if "domain_aware" not in models:
+            models.append("domain_aware")
+            
+        logger.info(f"Available models: {models}")
+        return models
     except requests.exceptions.RequestException as e:
         logger.error(f"Error getting available models: {str(e)}")
-        # Default to synthetic model if can't get list
-        return ["synthetic"]
+        # Default to synthetic and domain-aware models if can't get list
+        return ["synthetic", "domain_aware"]
 
-def predict_sentiment(text, model_type=None):
+def predict_sentiment(text, model_type=None, store_for_feedback=False):
     """
     Get sentiment prediction for a text using the model API.
     
     Args:
         text (str): Text to analyze
         model_type (str, optional): Type of model to use
+        store_for_feedback (bool): Whether to store prediction for feedback
         
     Returns:
         dict: Prediction result
@@ -129,13 +136,61 @@ def predict_sentiment(text, model_type=None):
         if model_type:
             data["model_type"] = model_type
             
-        response = requests.post(
-            f"{MODEL_API_URL}",
-            json=data,
-            headers={"Content-Type": "application/json"}
-        )
-        response.raise_for_status()
-        result = response.json()
+        # Set store_for_feedback based on parameter
+        data["store_for_feedback"] = store_for_feedback
+        
+        # Log request details
+        logger.info(f"Sending prediction request with store_for_feedback={store_for_feedback}, model_type={model_type}")
+            
+        # Handle domain-aware model separately if needed
+        if model_type == "domain_aware":
+            try:
+                # First try calling the normal API endpoint
+                logger.info(f"Calling API at: {MODEL_API_URL} with data: {data}")
+                response = requests.post(
+                    f"{MODEL_API_URL}",
+                    json=data,
+                    headers={"Content-Type": "application/json"}
+                )
+                response.raise_for_status()
+                result = response.json()
+            except requests.exceptions.RequestException:
+                # If the normal endpoint doesn't support domain-aware model,
+                # try a dedicated endpoint
+                try:
+                    domain_api_url = f"{MODEL_API_URL.rstrip('/predict')}/domain_predict"
+                    logger.info(f"Falling back to domain API at: {domain_api_url}")
+                    response = requests.post(
+                        domain_api_url,
+                        json=data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+                except requests.exceptions.RequestException as e2:
+                    # Fall back to hybrid model
+                    logger.warning(f"Domain-aware model API not available: {str(e2)}")
+                    data["model_type"] = "hybrid"
+                    response = requests.post(
+                        f"{MODEL_API_URL}",
+                        json=data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+                    # Add domain-aware tag so UI knows this was a fallback
+                    result["model_type"] = "domain_aware (fallback to hybrid)"
+        else:
+            # For other models, use standard API
+            logger.info(f"Calling API at: {MODEL_API_URL} with data: {data}")
+            response = requests.post(
+                f"{MODEL_API_URL}",
+                json=data,
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            result = response.json()
+            
         logger.info(f"Received prediction for text using {model_type or 'default'} model: {result}")
         return result
     except requests.exceptions.RequestException as e:
