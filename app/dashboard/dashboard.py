@@ -511,7 +511,7 @@ def display_comparison_feedback(text, models_data):
         "👎 Negative": -1,
         "😐 Neutral": 0,
         "👍 Positive": 1
-    } 
+    }
     
     # Create a container to show feedback status
     feedback_status = st.empty()
