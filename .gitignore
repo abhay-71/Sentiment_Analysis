@@ -65,8 +65,25 @@ venv.bak/
 logs/
 *.log
 
-# Sentiment model files (uncomment if you don't want to commit these)
-# app/models/*.pkl
+# Sentiment model files - archived/redundant
+app/models/*_[0-9]*.pkl
+# Temporary/old models
+app/models/sentiment_model.pkl
+app/models/vectorizer.pkl
+
+# Large datasets
+emergency_services_dataset_full.csv
+emergency_services_dataset_filtered.csv
+emergency_services_dataset_balanced.csv
+training_1600000_processed_noemoticon.csv
+Twitter_Data.csv
+
+# Empty data files
+app/data/emergency_tweets_processed.csv
+
+# Test files
+test_twitter_model.py
+test_custom_examples.py
 
 # OS-specific files
 .DS_Store
