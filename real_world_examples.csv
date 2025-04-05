@@ -1,0 +1,16 @@
+text,sentiment,domain
+Engine 3 responded to a structure fire at 123 Main St. Fire was contained to the kitchen area. No injuries reported.,0,fire
+Multiple units dispatched to a 3-alarm fire at the industrial park. Two firefighters experienced smoke inhalation and were transported to General Hospital.,-1,fire
+Crew successfully rescued two children from apartment fire on Oak Street. Both victims in stable condition.,1,fire
+Officers responded to a noise complaint at 456 Elm St. Residents were advised to lower music volume.,0,police
+Suspect apprehended after foot pursuit through downtown area. Officer Rodriguez sustained minor injuries during the arrest.,-1,police
+Community outreach program resulted in 25 new neighborhood watch groups. Crime statistics show 15% reduction in reported incidents.,1,police
+Paramedics responded to cardiac arrest call at 789 Pine Ave. Patient transported to County Hospital.,0,ems
+Multiple casualties reported in highway pileup. Air ambulance unable to respond due to poor weather conditions.,-1,ems
+EMT Jenkins performed successful emergency delivery on scene. Mother and newborn in excellent condition upon arrival at hospital.,1,ems
+Flood waters receding in northern district. Damage assessment teams deployed to affected areas.,0,disaster_response
+Evacuation orders in effect for coastal zones A and B. Hurricane expected to make landfall at 0200 hours.,-1,disaster_response
+All residents successfully evacuated from wildfire zone. No structures damaged thanks to firebreak established by forestry teams.,1,disaster_response
+Coast Guard monitoring oil tanker approaching harbor. Standard security procedures in effect.,0,coast_guard
+Search for missing boaters enters third day. Weather conditions hampering rescue efforts.,-1,coast_guard
+Rescue team successfully retrieved all five crew members from capsized vessel. Excellent coordination between air and sea units.,1,coast_guard

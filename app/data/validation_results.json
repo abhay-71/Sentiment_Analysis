@@ -1,0 +1,412 @@
+{
+  "overall": {
+    "sentiment_accuracy": 0.4666666666666667,
+    "domain_exact_match": 0.6666666666666666,
+    "sentiment_report": {
+      "negative": {
+        "precision": 0.4,
+        "recall": 0.8,
+        "f1-score": 0.5333333333333333,
+        "support": 5.0
+      },
+      "neutral": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 5.0
+      },
+      "positive": {
+        "precision": 0.6,
+        "recall": 0.6,
+        "f1-score": 0.6,
+        "support": 5.0
+      },
+      "accuracy": 0.4666666666666667,
+      "macro avg": {
+        "precision": 0.3333333333333333,
+        "recall": 0.4666666666666666,
+        "f1-score": 0.37777777777777777,
+        "support": 15.0
+      },
+      "weighted avg": {
+        "precision": 0.3333333333333333,
+        "recall": 0.4666666666666667,
+        "f1-score": 0.3777777777777777,
+        "support": 15.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        4,
+        0,
+        1
+      ],
+      [
+        4,
+        0,
+        1
+      ],
+      [
+        2,
+        0,
+        3
+      ]
+    ]
+  },
+  "domain_performance": {
+    "fire": {
+      "accuracy": 0.3333333333333333,
+      "count": 3,
+      "report": {
+        "negative": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "positive": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "f1-score": 0.5,
+          "support": 1.0
+        },
+        "accuracy": 0.3333333333333333,
+        "macro avg": {
+          "precision": 0.1111111111111111,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.16666666666666666,
+          "support": 3.0
+        },
+        "weighted avg": {
+          "precision": 0.1111111111111111,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.16666666666666666,
+          "support": 3.0
+        }
+      }
+    },
+    "police": {
+      "accuracy": 0.6666666666666666,
+      "count": 3,
+      "report": {
+        "negative": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1-score": 0.6666666666666666,
+          "support": 1.0
+        },
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "positive": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 1.0
+        },
+        "accuracy": 0.6666666666666666,
+        "macro avg": {
+          "precision": 0.5,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.5555555555555555,
+          "support": 3.0
+        },
+        "weighted avg": {
+          "precision": 0.5,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.5555555555555555,
+          "support": 3.0
+        }
+      }
+    },
+    "ems": {
+      "accuracy": 0.3333333333333333,
+      "count": 3,
+      "report": {
+        "negative": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "f1-score": 0.5,
+          "support": 1.0
+        },
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "positive": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "accuracy": 0.3333333333333333,
+        "macro avg": {
+          "precision": 0.1111111111111111,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.16666666666666666,
+          "support": 3.0
+        },
+        "weighted avg": {
+          "precision": 0.1111111111111111,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.16666666666666666,
+          "support": 3.0
+        }
+      }
+    },
+    "disaster_response": {
+      "accuracy": 0.3333333333333333,
+      "count": 3,
+      "report": {
+        "negative": {
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "f1-score": 0.5,
+          "support": 1.0
+        },
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "positive": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "accuracy": 0.3333333333333333,
+        "macro avg": {
+          "precision": 0.1111111111111111,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.16666666666666666,
+          "support": 3.0
+        },
+        "weighted avg": {
+          "precision": 0.1111111111111111,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.16666666666666666,
+          "support": 3.0
+        }
+      }
+    },
+    "coast_guard": {
+      "accuracy": 0.6666666666666666,
+      "count": 3,
+      "report": {
+        "negative": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1-score": 0.6666666666666666,
+          "support": 1.0
+        },
+        "neutral": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 1.0
+        },
+        "positive": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1-score": 1.0,
+          "support": 1.0
+        },
+        "accuracy": 0.6666666666666666,
+        "macro avg": {
+          "precision": 0.5,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.5555555555555555,
+          "support": 3.0
+        },
+        "weighted avg": {
+          "precision": 0.5,
+          "recall": 0.6666666666666666,
+          "f1-score": 0.5555555555555555,
+          "support": 3.0
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "text": "Engine 3 responded to a structure fire at 123 Main St. Fire was contained to the kitchen area. No injuries reported.",
+      "true_sentiment": 0,
+      "predicted_sentiment": 1,
+      "true_domain": "fire",
+      "predicted_domains": [
+        "fire"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": true
+    },
+    {
+      "text": "Multiple units dispatched to a 3-alarm fire at the industrial park. Two firefighters experienced smoke inhalation and were transported to General Hospital.",
+      "true_sentiment": -1,
+      "predicted_sentiment": 1,
+      "true_domain": "fire",
+      "predicted_domains": [
+        "ems",
+        "fire"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": true
+    },
+    {
+      "text": "Crew successfully rescued two children from apartment fire on Oak Street. Both victims in stable condition.",
+      "true_sentiment": 1,
+      "predicted_sentiment": 1,
+      "true_domain": "fire",
+      "predicted_domains": [
+        "fire"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": true
+    },
+    {
+      "text": "Officers responded to a noise complaint at 456 Elm St. Residents were advised to lower music volume.",
+      "true_sentiment": 0,
+      "predicted_sentiment": -1,
+      "true_domain": "police",
+      "predicted_domains": [
+        "general"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": false
+    },
+    {
+      "text": "Suspect apprehended after foot pursuit through downtown area. Officer Rodriguez sustained minor injuries during the arrest.",
+      "true_sentiment": -1,
+      "predicted_sentiment": -1,
+      "true_domain": "police",
+      "predicted_domains": [
+        "police"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": true
+    },
+    {
+      "text": "Community outreach program resulted in 25 new neighborhood watch groups. Crime statistics show 15% reduction in reported incidents.",
+      "true_sentiment": 1,
+      "predicted_sentiment": 1,
+      "true_domain": "police",
+      "predicted_domains": [
+        "police"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": true
+    },
+    {
+      "text": "Paramedics responded to cardiac arrest call at 789 Pine Ave. Patient transported to County Hospital.",
+      "true_sentiment": 0,
+      "predicted_sentiment": -1,
+      "true_domain": "ems",
+      "predicted_domains": [
+        "ems"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": true
+    },
+    {
+      "text": "Multiple casualties reported in highway pileup. Air ambulance unable to respond due to poor weather conditions.",
+      "true_sentiment": -1,
+      "predicted_sentiment": -1,
+      "true_domain": "ems",
+      "predicted_domains": [
+        "ems"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": true
+    },
+    {
+      "text": "EMT Jenkins performed successful emergency delivery on scene. Mother and newborn in excellent condition upon arrival at hospital.",
+      "true_sentiment": 1,
+      "predicted_sentiment": -1,
+      "true_domain": "ems",
+      "predicted_domains": [
+        "disaster_response",
+        "ems"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": true
+    },
+    {
+      "text": "Flood waters receding in northern district. Damage assessment teams deployed to affected areas.",
+      "true_sentiment": 0,
+      "predicted_sentiment": -1,
+      "true_domain": "disaster_response",
+      "predicted_domains": [
+        "disaster_response"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": true
+    },
+    {
+      "text": "Evacuation orders in effect for coastal zones A and B. Hurricane expected to make landfall at 0200 hours.",
+      "true_sentiment": -1,
+      "predicted_sentiment": -1,
+      "true_domain": "disaster_response",
+      "predicted_domains": [
+        "disaster_response"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": true
+    },
+    {
+      "text": "All residents successfully evacuated from wildfire zone. No structures damaged thanks to firebreak established by forestry teams.",
+      "true_sentiment": 1,
+      "predicted_sentiment": -1,
+      "true_domain": "disaster_response",
+      "predicted_domains": [
+        "general"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": false
+    },
+    {
+      "text": "Coast Guard monitoring oil tanker approaching harbor. Standard security procedures in effect.",
+      "true_sentiment": 0,
+      "predicted_sentiment": -1,
+      "true_domain": "coast_guard",
+      "predicted_domains": [
+        "general"
+      ],
+      "correct_sentiment": false,
+      "correct_domain": false
+    },
+    {
+      "text": "Search for missing boaters enters third day. Weather conditions hampering rescue efforts.",
+      "true_sentiment": -1,
+      "predicted_sentiment": -1,
+      "true_domain": "coast_guard",
+      "predicted_domains": [
+        "general"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": false
+    },
+    {
+      "text": "Rescue team successfully retrieved all five crew members from capsized vessel. Excellent coordination between air and sea units.",
+      "true_sentiment": 1,
+      "predicted_sentiment": 1,
+      "true_domain": "coast_guard",
+      "predicted_domains": [
+        "general"
+      ],
+      "correct_sentiment": true,
+      "correct_domain": false
+    }
+  ]
+}
