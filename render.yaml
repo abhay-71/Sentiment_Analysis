@@ -10,6 +10,10 @@ services:
         value: 10000
       - key: PYTHON_VERSION
         value: 3.9.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
 
   # Model API Service
   - name: sentiment-model-api
@@ -27,8 +31,12 @@ services:
           name: sentiment-mock-api
           type: web
           property: host
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
 
-  # Dashboard Service
+  # Main Dashboard Service
   - name: sentiment-dashboard
     type: web
     env: python
@@ -46,4 +54,89 @@ services:
           type: web
           property: host
       - key: PYTHON_VERSION
-        value: 3.9.0 
+        value: 3.9.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
+
+  # Social Media Batch Processor
+  - name: sentiment-social-processor
+    type: worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app/social_media/data_processor.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: MODEL_API_HOST
+        fromService:
+          name: sentiment-model-api
+          type: web
+          property: host
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
+
+  # Social Media Authentication UI
+  - name: sentiment-social-auth
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app/social_media/social_media_auth.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PORT
+        value: 10002
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
+
+  # Social Media Data Visualization
+  - name: sentiment-social-data
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app/social_media/social_media_data.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PORT
+        value: 10003
+      - key: MODEL_API_HOST
+        fromService:
+          name: sentiment-model-api
+          type: web
+          property: host
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
+
+  # CSV Data Upload Page
+  - name: sentiment-csv-upload
+    type: web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app/social_media/csv_data_upload.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PORT
+        value: 10004
+      - key: MODEL_API_HOST
+        fromService:
+          name: sentiment-model-api
+          type: web
+          property: host
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentiment-analysis-db
+          property: connectionString
+
+databases:
+  - name: sentiment-analysis-db
+    plan: free 
