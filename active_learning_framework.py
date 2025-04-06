@@ -60,7 +60,7 @@ class FeedbackEntry(Base):
     def __repr__(self):
         return f"<FeedbackEntry(id='{self.id}', text='{self.text[:20]}...', confidence={self.confidence_score})>"
 
-def init_database():
+def init_database(): 
     """
     Initialize the feedback database.
     """
