@@ -55,6 +55,8 @@ services:
         value: 10000
       - key: PYTHON_VERSION
         value: 3.9.0
+      - key: DATABASE_URL
+        value: postgresql://username:password@host/database_name
 
   # Model API Service
   - name: sentiment-model-api
@@ -72,6 +74,8 @@ services:
           name: sentiment-mock-api
           type: web
           property: host
+      - key: DATABASE_URL
+        value: postgresql://username:password@host/database_name
 
   # Main Dashboard Service
   - name: sentiment-dashboard
@@ -157,7 +161,9 @@ services:
 
 ## Step 2: Set Up a Shared Database
 
-Since multiple services need to access the same databases, we need to set up a shared database. Render provides a PostgreSQL database service:
+Since multiple services need to access the same databases, you have two options:
+
+### Option 1: Create a New PostgreSQL Database on Render
 
 1. Log in to your Render account
 2. Go to the Dashboard and click "New"
@@ -173,7 +179,7 @@ Once created, note the following connection details:
 - Username
 - Password
 
-Update your `render.yaml` to reference this database for all services:
+Update your `render.yaml` to reference this database for all services using the `fromDatabase` property:
 
 ```yaml
 # Add this to each service that needs database access
@@ -183,6 +189,26 @@ envVars:
       name: sentiment-analysis-db
       property: connectionString
 ```
+
+### Option 2: Use an Existing PostgreSQL Database
+
+If you already have a PostgreSQL database set up on Render or elsewhere:
+
+1. Note the connection details:
+   - Internal Database URL (for services within Render)
+   - External Database URL (for external connections)
+   - Database credentials
+
+2. Update your `render.yaml` to use the database connection string directly:
+
+```yaml
+# Add this to each service that needs database access
+envVars:
+  - key: DATABASE_URL
+    value: postgresql://username:password@host/database_name
+```
+
+Replace `username`, `password`, `host`, and `database_name` with your actual database credentials.
 
 ## Step 3: Deploy Using Render Blueprint
 
@@ -195,216 +221,51 @@ envVars:
 
 ## Step 4: Configure Environment Variables
 
-After deployment, verify and update these environment variables in each service:
+After deployment, verify these environment variables in each service:
 
 - `API_HOST`: URL of the Mock API service
 - `API_PORT`: Port for each service
 - `MODEL_API_URL`: Full URL of the Model API service
-- `DATABASE_URL`: Connection string to your PostgreSQL database
+- `DATABASE_URL`: Connection string to your PostgreSQL database (should already be configured in render.yaml)
 
 ## Step 5: Initialize the Databases
 
-Both the main database and social media database need to be initialized:
+Both the main database and social media database need to be initialized in your PostgreSQL database:
 
 ### Initialize Main Database
 
 1. In your Render dashboard, go to the Model API service
 2. Click "Shell" to open a terminal
-3. Run: `python -c "from app.data.database import init_db; init_db()"`
-4. Then run: `python app/data/data_ingestion.py --count 50`
+3. Verify the DATABASE_URL environment variable is correctly set:
+   ```
+   echo $DATABASE_URL
+   ```
+4. Run: `python -c "from app.data.database import init_db; init_db()"`
+5. Then run: `python app/data/data_ingestion.py --count 50`
 
 ### Initialize Social Media Database
 
 1. Go to the Social Media Batch Processor service
 2. Click "Shell" to open a terminal
-3. Run: `python -c "from app.social_media.database import init_db; init_db()"`
+3. Verify the DATABASE_URL environment variable:
+   ```
+   echo $DATABASE_URL
+   ```
+4. Run: `python -c "from app.social_media.database import init_db; init_db()"`
 
 ## Step 6: Set Up Database Migration
 
-To adapt the application to use PostgreSQL instead of SQLite:
+If you have existing data in SQLite databases that you want to migrate to your PostgreSQL database:
 
-1. Add this script to your repository as `scripts/migrate_to_postgres.py`:
-
-```python
-"""
-Database Migration Script: SQLite to PostgreSQL
-This script migrates data from SQLite to PostgreSQL for the Render deployment.
-"""
-import os
-import sqlite3
-import psycopg2
-from psycopg2.extras import execute_values
-import sys
-
-# Add project root to path
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
-
-# Import database connections
-from app.data.database import get_db_connection as get_incidents_conn
-from app.social_media.database import get_db_connection as get_social_conn
-
-def migrate_incidents_db(pg_conn_string):
-    """Migrate incidents database to PostgreSQL"""
-    print("Migrating incidents database...")
-    
-    # Connect to SQLite
-    sqlite_conn = get_incidents_conn()
-    sqlite_cursor = sqlite_conn.cursor()
-    
-    # Connect to PostgreSQL
-    pg_conn = psycopg2.connect(pg_conn_string)
-    pg_cursor = pg_conn.cursor()
-    
-    # Create tables in PostgreSQL
-    pg_cursor.execute('''
-    CREATE TABLE IF NOT EXISTS incidents (
-        id SERIAL PRIMARY KEY,
-        incident_id TEXT UNIQUE NOT NULL,
-        report TEXT NOT NULL,
-        timestamp TIMESTAMP NOT NULL,
-        sentiment INTEGER,
-        confidence REAL,
-        model_used TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    ''')
-    
-    # Get data from SQLite
-    sqlite_cursor.execute("SELECT incident_id, report, timestamp, sentiment, confidence, model_used, created_at FROM incidents")
-    rows = sqlite_cursor.fetchall()
-    
-    if rows:
-        # Insert data into PostgreSQL
-        execute_values(
-            pg_cursor,
-            "INSERT INTO incidents (incident_id, report, timestamp, sentiment, confidence, model_used, created_at) VALUES %s ON CONFLICT (incident_id) DO NOTHING",
-            rows
-        )
-    
-    # Commit and close
-    pg_conn.commit()
-    sqlite_conn.close()
-    pg_conn.close()
-    
-    print(f"Migrated {len(rows)} incident records")
-
-def migrate_social_media_db(pg_conn_string):
-    """Migrate social media database to PostgreSQL"""
-    print("Migrating social media database...")
-    
-    # Connect to SQLite
-    sqlite_conn = get_social_conn()
-    sqlite_cursor = sqlite_conn.cursor()
-    
-    # Connect to PostgreSQL
-    pg_conn = psycopg2.connect(pg_conn_string)
-    pg_cursor = pg_conn.cursor()
-    
-    # Create tables in PostgreSQL
-    # social_media_accounts table
-    pg_cursor.execute('''
-    CREATE TABLE IF NOT EXISTS social_media_accounts (
-        id SERIAL PRIMARY KEY,
-        platform TEXT NOT NULL,
-        account_name TEXT NOT NULL,
-        account_id TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(platform, account_id)
-    )
-    ''')
-    
-    # social_media_posts table
-    pg_cursor.execute('''
-    CREATE TABLE IF NOT EXISTS social_media_posts (
-        id SERIAL PRIMARY KEY,
-        post_id TEXT NOT NULL,
-        platform TEXT NOT NULL,
-        account_id INTEGER REFERENCES social_media_accounts(id),
-        content TEXT NOT NULL,
-        author TEXT,
-        timestamp TIMESTAMP NOT NULL,
-        url TEXT,
-        engagement_count INTEGER DEFAULT 0,
-        raw_data TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(platform, post_id)
-    )
-    ''')
-    
-    # social_media_sentiment table
-    pg_cursor.execute('''
-    CREATE TABLE IF NOT EXISTS social_media_sentiment (
-        id SERIAL PRIMARY KEY,
-        post_id INTEGER REFERENCES social_media_posts(id),
-        sentiment INTEGER NOT NULL,
-        confidence REAL,
-        model_name TEXT,
-        processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    ''')
-    
-    # Migrate accounts
-    sqlite_cursor.execute("SELECT platform, account_name, account_id, created_at, last_updated FROM social_media_accounts")
-    account_rows = sqlite_cursor.fetchall()
-    
-    if account_rows:
-        execute_values(
-            pg_cursor,
-            "INSERT INTO social_media_accounts (platform, account_name, account_id, created_at, last_updated) VALUES %s ON CONFLICT (platform, account_id) DO NOTHING",
-            account_rows
-        )
-    
-    # Migrate posts
-    sqlite_cursor.execute("SELECT post_id, platform, account_id, content, author, timestamp, url, engagement_count, raw_data, created_at FROM social_media_posts")
-    post_rows = sqlite_cursor.fetchall()
-    
-    if post_rows:
-        execute_values(
-            pg_cursor,
-            "INSERT INTO social_media_posts (post_id, platform, account_id, content, author, timestamp, url, engagement_count, raw_data, created_at) VALUES %s ON CONFLICT (platform, post_id) DO NOTHING",
-            post_rows
-        )
-    
-    # Migrate sentiment
-    sqlite_cursor.execute("SELECT post_id, sentiment, confidence, model_name, processed_at FROM social_media_sentiment")
-    sentiment_rows = sqlite_cursor.fetchall()
-    
-    if sentiment_rows:
-        execute_values(
-            pg_cursor,
-            "INSERT INTO social_media_sentiment (post_id, sentiment, confidence, model_name, processed_at) VALUES %s",
-            sentiment_rows
-        )
-    
-    # Commit and close
-    pg_conn.commit()
-    sqlite_conn.close()
-    pg_conn.close()
-    
-    print(f"Migrated {len(account_rows)} accounts, {len(post_rows)} posts, and {len(sentiment_rows)} sentiment records")
-
-if __name__ == "__main__":
-    # Get PostgreSQL connection string from environment
-    pg_conn_string = os.environ.get("DATABASE_URL")
-    
-    if not pg_conn_string:
-        print("ERROR: DATABASE_URL environment variable not set")
-        sys.exit(1)
-    
-    # Migrate both databases
-    migrate_incidents_db(pg_conn_string)
-    migrate_social_media_db(pg_conn_string)
-    
-    print("Migration complete!")
-```
+1. Add the migration script to your repository as `scripts/migrate_to_postgres.py` (see full script below)
 
 2. Update all database connection functions to use PostgreSQL when deployed:
    - Modify `app/data/database.py` and `app/social_media/database.py` to check for `DATABASE_URL` environment variable
    - Use psycopg2 for PostgreSQL connection when available
 
-3. Run the migration script in the shell of any service:
+3. Run the migration script in the shell of any service, ensuring the `DATABASE_URL` points to your PostgreSQL database:
    ```
+   echo $DATABASE_URL  # Verify this is your PostgreSQL connection string
    python scripts/migrate_to_postgres.py
    ```
 
