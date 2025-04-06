@@ -13,6 +13,7 @@ import altair as alt
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import sqlite3
+import calendar
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -20,7 +21,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 # Import project modules
 from app.utils.config import DASHBOARD_TITLE
 from app.social_media.social_media_connector import get_posts_from_all_platforms
-from app.social_media.database import get_posts, get_sentiment_stats, get_sentiment_by_platform
+from app.social_media.database import get_posts, get_sentiment_stats, get_sentiment_by_platform, init_db
 
 # Configure logging
 logging.basicConfig(
@@ -36,6 +37,16 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+def initialize_database():
+    """Initialize the social media database if it doesn't exist already"""
+    try:
+        # Initialize the database
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        st.sidebar.error(f"Error initializing database: {str(e)}")
 
 def fetch_and_save_data():
     """Fetch data from social media platforms and save to database"""
@@ -327,9 +338,178 @@ def display_post_feed(platform=None):
             if post.get('url'):
                 st.markdown(f"[View Original Post]({post['url']})")
 
+def display_daily_sentiment_chart(platform=None):
+    """
+    Display a line chart showing sentiment trends for each day of a selected month.
+    
+    Args:
+        platform (str, optional): Platform to filter by, or None for all platforms
+    """
+    # Get the current month and year
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    # Add month and year selectors
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        selected_month_idx = st.selectbox(
+            "Select Month",
+            options=range(len(months)),
+            format_func=lambda x: months[x][1],
+            index=current_month-1,
+            key="daily_chart_month"
+        )
+        selected_month = months[selected_month_idx][0]
+    
+    with col2:
+        years = list(range(current_year-2, current_year+1))
+        selected_year = st.selectbox(
+            "Select Year",
+            options=years,
+            index=years.index(current_year),
+            key="daily_chart_year"
+        )
+    
+    # Get data from database
+    try:
+        # Connect to the correct database file - social_media.db instead of sentiment.db
+        db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'social_media.db')
+        logger.info(f"Connecting to database at: {db_path}")
+        
+        # Check if file exists
+        if not os.path.exists(db_path):
+            st.error(f"Database file not found: {db_path}")
+            logger.error(f"Database file not found: {db_path}")
+            return
+            
+        conn = sqlite3.connect(db_path)
+        
+        # First, let's check if the table exists
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [table[0] for table in cursor.fetchall()]
+        logger.info(f"Tables in database: {tables}")
+        
+        if 'social_media_posts' not in tables:
+            st.error("The social_media_posts table does not exist in the database. Please initialize the database first.")
+            logger.error(f"Table 'social_media_posts' not found in {tables}")
+            conn.close()
+            return
+        
+        # Build query based on whether platform filter is applied
+        # To get the sentiment, we need to join with the social_media_sentiment table
+        if platform:
+            query = """
+            SELECT strftime('%d', p.timestamp) as day, 
+                   s.sentiment,
+                   COUNT(*) as count
+            FROM social_media_posts p
+            JOIN social_media_sentiment s ON p.id = s.post_id
+            WHERE p.platform = ? 
+              AND strftime('%m', p.timestamp) = ?
+              AND strftime('%Y', p.timestamp) = ?
+            GROUP BY day, s.sentiment
+            ORDER BY day
+            """
+            params = (platform, f"{selected_month:02d}", str(selected_year))
+        else:
+            query = """
+            SELECT strftime('%d', p.timestamp) as day, 
+                   s.sentiment,
+                   COUNT(*) as count
+            FROM social_media_posts p
+            JOIN social_media_sentiment s ON p.id = s.post_id
+            WHERE strftime('%m', p.timestamp) = ?
+              AND strftime('%Y', p.timestamp) = ?
+            GROUP BY day, s.sentiment
+            ORDER BY day
+            """
+            params = (f"{selected_month:02d}", str(selected_year))
+        
+        logger.info(f"Executing query: {query} with params: {params}")
+        
+        # Execute query
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        
+        # If dataframe is empty, show message and return
+        if df.empty:
+            st.info(f"No sentiment data available for {calendar.month_name[selected_month]} {selected_year}.")
+            return
+        
+        # Convert day column to integers
+        df['day'] = df['day'].astype(int)
+        
+        # Map sentiment values to categories
+        sentiment_map = {1: 'positive', 0: 'neutral', -1: 'negative'}
+        df['sentiment_category'] = df['sentiment'].map(sentiment_map)
+        
+        # Pivot table for easier plotting
+        pivot_df = df.pivot(index='day', columns='sentiment_category', values='count').reset_index()
+        
+        # Ensure all columns exist
+        for col in ['positive', 'neutral', 'negative']:
+            if col not in pivot_df.columns:
+                pivot_df[col] = 0
+        
+        # Ensure all days of month are represented
+        days_in_month = (datetime(selected_year, selected_month % 12 + 1, 1) - timedelta(days=1)).day if selected_month < 12 else 31
+        all_days = pd.DataFrame({'day': range(1, days_in_month + 1)})
+        
+        # Merge to ensure all days are included
+        result_df = pd.merge(all_days, pivot_df, on='day', how='left').fillna(0)
+        
+        # Melt for Altair
+        melted_df = result_df.melt(
+            id_vars=['day'],
+            value_vars=['positive', 'neutral', 'negative'],
+            var_name='sentiment',
+            value_name='count'
+        )
+        
+        # Create line chart
+        chart = alt.Chart(melted_df).mark_line(point=True).encode(
+            x=alt.X('day:O', title=f'Day of {calendar.month_name[selected_month]}', axis=alt.Axis(labelAngle=0)),
+            y=alt.Y('count:Q', title='Number of Posts'),
+            color=alt.Color(
+                'sentiment:N', 
+                scale=alt.Scale(
+                    domain=['positive', 'neutral', 'negative'],
+                    range=['#4CAF50', '#FFC107', '#F44336']
+                ),
+                legend=alt.Legend(title='Sentiment')
+            ),
+            tooltip=['day:O', 'sentiment:N', 'count:Q']
+        ).properties(
+            height=400,
+            title=f'Daily Sentiment Analysis for {calendar.month_name[selected_month]} {selected_year}'
+        ).interactive()
+        
+        st.altair_chart(chart, use_container_width=True)
+        
+        # Add download button
+        csv = result_df.to_csv(index=False)
+        st.download_button(
+            label="Download Daily Sentiment Data",
+            data=csv,
+            file_name=f"daily_sentiment_{platform or 'all'}_{selected_year}_{selected_month}.csv",
+            mime="text/csv",
+        )
+        
+    except Exception as e:
+        st.error(f"Error retrieving daily sentiment data: {str(e)}")
+        logger.error(f"Error in display_daily_sentiment_chart: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+
 def main():
     """Main function for the social media data page"""
     st.title("Social Media Data Analysis")
+    
+    # Initialize database
+    initialize_database()
     
     # Initialize session state
     if "time_range" not in st.session_state:
@@ -384,6 +564,10 @@ def main():
     # Top row: Sentiment Summary
     st.header("Sentiment Summary")
     display_sentiment_summary(platform=platform_filter)
+    
+    # Daily sentiment chart
+    st.subheader("Daily Sentiment Trends")
+    display_daily_sentiment_chart(platform=platform_filter)
     
     # Platform comparison (only if "All Platforms" is selected)
     if platform_filter is None:

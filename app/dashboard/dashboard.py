@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import altair as alt
 from datetime import datetime, timedelta
 import requests
+import calendar
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -22,7 +23,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.dashboard.data_service import (
     get_incidents_from_db, get_sentiment_statistics,
     predict_sentiment, get_sentiment_over_time, get_recent_incidents,
-    get_available_models, compare_models, MODEL_API_URL
+    get_available_models, compare_models, MODEL_API_URL, get_sentiment_by_day_of_month
 )
 from app.utils.config import DASHBOARD_TITLE, REFRESH_INTERVAL
 
@@ -103,6 +104,26 @@ def main():
         min_value=1,
         max_value=90,
         value=30
+    )
+    
+    # Month selector for daily chart
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    months = [(i, calendar.month_name[i]) for i in range(1, 13)]
+    selected_month_idx = st.sidebar.selectbox(
+        "Select Month for Daily Chart",
+        options=range(len(months)),
+        format_func=lambda x: months[x][1],
+        index=current_month-1
+    )
+    selected_month = months[selected_month_idx][0]
+    
+    years = list(range(current_year-2, current_year+1))
+    selected_year = st.sidebar.selectbox(
+        "Select Year for Daily Chart",
+        options=years,
+        index=years.index(current_year)
     )
     
     # Display last update time
@@ -198,6 +219,10 @@ def main():
     
     with col4:
         display_recent_incidents()
+    
+    # Third row: daily sentiment chart
+    st.subheader("Daily Sentiment Analysis")
+    display_daily_sentiment_chart(month=selected_month, year=selected_year)
     
     # Third row: active learning section
     if ACTIVE_LEARNING_AVAILABLE:
@@ -676,6 +701,64 @@ def display_recent_incidents():
             subset=['Sentiment']
         ),
         use_container_width=True
+    )
+
+def display_daily_sentiment_chart(month=None, year=None):
+    """
+    Display a line chart showing sentiment trends for each day of a specific month.
+    
+    Args:
+        month (int): Month to display (1-12), defaults to current month
+        year (int): Year to display, defaults to current year
+    """
+    # Set defaults
+    if month is None:
+        month = datetime.now().month
+    if year is None:
+        year = datetime.now().year
+    
+    # Get data for the specific month
+    df = get_sentiment_by_day_of_month(month=month, year=year)
+    
+    if df.empty:
+        st.info(f"No sentiment data available for {calendar.month_name[month]} {year}.")
+        return
+    
+    # Melt the DataFrame for Altair
+    df_melted = df.melt(
+        id_vars=['day'],
+        value_vars=['positive', 'neutral', 'negative'],
+        var_name='sentiment',
+        value_name='count'
+    )
+    
+    # Create Altair chart
+    chart = alt.Chart(df_melted).mark_line(point=True).encode(
+        x=alt.X('day:O', title=f'Day of {calendar.month_name[month]}', axis=alt.Axis(labelAngle=0)),
+        y=alt.Y('count:Q', title='Number of Incidents'),
+        color=alt.Color(
+            'sentiment:N', 
+            scale=alt.Scale(
+                domain=['positive', 'neutral', 'negative'],
+                range=['#4CAF50', '#9E9E9E', '#F44336']
+            ),
+            legend=alt.Legend(title='Sentiment')
+        ),
+        tooltip=['day:O', 'sentiment:N', 'count:Q']
+    ).properties(
+        height=400,
+        title=f'Daily Sentiment Analysis for {calendar.month_name[month]} {year}'
+    ).interactive()
+    
+    st.altair_chart(chart, use_container_width=True)
+    
+    # Add download button for the data
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download Daily Sentiment Data",
+        data=csv,
+        file_name=f"daily_sentiment_{year}_{month}.csv",
+        mime="text/csv",
     )
 
 if __name__ == "__main__":

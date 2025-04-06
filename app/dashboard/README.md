@@ -29,6 +29,42 @@ The dashboard provides the following visualizations and tools:
    - Real-time sentiment prediction
    - Confidence score visualization
 
+## Features
+
+- Real-time sentiment analysis for emergency services text data
+- Interactive dashboard with sentiment distribution visualizations
+- Historical sentiment trends over time
+- Multi-model support with model selection and comparison
+- Active learning feedback loop for model improvement
+- Export functionality for data analysis
+
+## Related Pages
+
+### Social Media Data Analysis
+
+The Social Media Data Analysis page provides dedicated insights for social media content:
+
+- Sentiment summary statistics for social media posts
+- Platform comparison of sentiment distribution 
+- Daily sentiment chart showing day-by-day sentiment trends
+- Social media post feed with sentiment analysis
+
+Access the Social Media Data Analysis page through the navigation links in the dashboard.
+
+### Daily Sentiment Chart (Social Media Page)
+
+The Daily Sentiment Chart has been implemented in the Social Media Data Analysis page, providing a detailed view of sentiment trends for each day of a selected month. This visualization helps identify daily patterns and specific days with notable sentiment shifts.
+
+**Features:**
+- Line chart showing sentiment counts for each day of the month
+- Separate lines for positive, neutral, and negative sentiments
+- Interactive tooltips displaying exact counts
+- Month and year selection controls
+- Data download functionality
+- Platform filtering capabilities
+
+This component is specifically designed for social media data analysis and can be found in the Social Media Data Analysis page.
+
 ## Running the Dashboard
 
 To run the dashboard locally:

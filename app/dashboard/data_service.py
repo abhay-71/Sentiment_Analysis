@@ -303,4 +303,74 @@ def get_recent_incidents(limit=10):
     
     except Exception as e:
         logger.error(f"Error getting recent incidents: {str(e)}")
-        return pd.DataFrame() 
+        return pd.DataFrame()
+
+def get_sentiment_by_day_of_month(month=None, year=None):
+    """
+    Get sentiment trends for each day of a specific month.
+    
+    Args:
+        month (int): Month to analyze (1-12), defaults to current month
+        year (int): Year to analyze, defaults to current year
+        
+    Returns:
+        pandas.DataFrame: DataFrame with daily sentiment counts for the month
+    """
+    try:
+        # Set defaults to current month/year if not provided
+        if month is None:
+            month = datetime.now().month
+        if year is None:
+            year = datetime.now().year
+            
+        # Get incidents from database (generous limit to ensure we get all data)
+        df = get_incidents_from_db(limit=10000)
+        
+        if df.empty:
+            return pd.DataFrame()
+        
+        # Filter for the specific month and year
+        df = df[(df['timestamp'].dt.month == month) & (df['timestamp'].dt.year == year)]
+        
+        if df.empty:
+            logger.warning(f"No data found for {year}-{month}")
+            # Create empty DataFrame with expected structure for consistent return
+            return pd.DataFrame(columns=['day', 'positive', 'neutral', 'negative'])
+        
+        # Extract day of month
+        df['day'] = df['timestamp'].dt.day
+        
+        # Group by day and sentiment
+        daily_sentiment = df.groupby(['day', 'sentiment_label']).size().reset_index(name='count')
+        
+        # Pivot table for easier plotting
+        pivot_table = daily_sentiment.pivot(
+            index='day', 
+            columns='sentiment_label', 
+            values='count'
+        ).fillna(0)
+        
+        # Ensure all sentiment labels exist
+        for label in ['positive', 'neutral', 'negative']:
+            if label not in pivot_table.columns:
+                pivot_table[label] = 0
+        
+        # Keep only the sentiment columns we need
+        pivot_table = pivot_table[['positive', 'neutral', 'negative']]
+        
+        # Reset index to make 'day' a column
+        pivot_table = pivot_table.reset_index()
+        
+        # Make sure all days of month are represented (1-31 or appropriate for month)
+        days_in_month = (datetime(year, month % 12 + 1, 1) - timedelta(days=1)).day if month < 12 else 31
+        all_days = pd.DataFrame({'day': range(1, days_in_month + 1)})
+        
+        # Merge to ensure all days are included
+        result = pd.merge(all_days, pivot_table, on='day', how='left').fillna(0)
+        
+        logger.info(f"Generated daily sentiment trends for {year}-{month}")
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error generating daily sentiment trends: {str(e)}")
+        return pd.DataFrame(columns=['day', 'positive', 'neutral', 'negative']) 
