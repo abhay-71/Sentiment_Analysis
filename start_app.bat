@@ -36,6 +36,8 @@ if not exist ".env" (
 
 REM Create data directory if it doesn't exist
 if not exist "app\data" mkdir app\data
+if not exist "app\logs" mkdir app\logs
+if not exist "app\data\credentials" mkdir app\data\credentials
 
 REM Check if database exists, create if not
 if not exist "app\data\incidents.db" (
@@ -43,6 +45,11 @@ if not exist "app\data\incidents.db" (
     python -c "from app.data.database import init_db; init_db()"
     call :print_green "Database initialized."
 )
+
+REM Initialize social media database
+call :print_yellow "Initializing social media database..."
+python -c "from app.social_media.database import init_db; init_db()"
+call :print_green "Social media database initialized."
 
 REM Check for models
 call :print_blue "Checking for available sentiment models..."
@@ -83,27 +90,75 @@ call :print_green "Model API started."
 REM Short pause to ensure model API is up
 timeout /t 2 /nobreak > nul
 
+REM Start social media batch processor
+call :print_blue "Starting Social Media Batch Processor..."
+start /b cmd /c python app\social_media\data_processor.py > app\logs\social_processor.log 2>&1
+set "SOCIAL_PROCESSOR_PID=%ERRORLEVEL%"
+call :print_green "Social Media Batch Processor started."
+
+REM Start social media authentication UI
+call :print_blue "Starting Social Media Authentication UI..."
+start /b cmd /c streamlit run app\social_media\social_media_auth.py --server.port 8503 > app\logs\social_auth.log 2>&1
+set "SOCIAL_AUTH_PID=%ERRORLEVEL%"
+call :print_green "Social Media Authentication UI started."
+
+REM Start social media data visualization
+call :print_blue "Starting Social Media Data Visualization..."
+start /b cmd /c streamlit run app\social_media\social_media_data.py --server.port 8504 > app\logs\social_data.log 2>&1
+set "SOCIAL_DATA_PID=%ERRORLEVEL%"
+call :print_green "Social Media Data Visualization started."
+
+REM Start CSV data upload page
+call :print_blue "Starting CSV Data Upload Page..."
+start /b cmd /c streamlit run app\social_media\csv_data_upload.py --server.port 8505 > app\logs\csv_upload.log 2>&1
+set "CSV_UPLOAD_PID=%ERRORLEVEL%"
+call :print_green "CSV Data Upload Page started."
+
 REM Start Streamlit dashboard
 call :print_blue "Starting Streamlit Dashboard..."
 start /b cmd /c streamlit run app\dashboard\dashboard.py > app\logs\dashboard.log 2>&1
 set "DASHBOARD_PID=%ERRORLEVEL%"
 call :print_green "Dashboard started."
 
-REM Create necessary directories for logs
-if not exist "app\logs" mkdir app\logs
-
 REM Write information for cleanup
 echo @echo off > .app_processes.bat
-echo taskkill /f /fi "WindowTitle eq mock_api.py*" >> .app_processes.bat
-echo taskkill /f /fi "WindowTitle eq model_api.py*" >> .app_processes.bat
-echo taskkill /f /fi "WindowTitle eq streamlit run*" >> .app_processes.bat
-echo echo All services stopped. >> .app_processes.bat
+echo call :print_blue "Stopping Mock API processes..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq mock_api.py*" 2^>nul >> .app_processes.bat
+echo taskkill /f /fi "IMAGENAME eq python.exe" /fi "WINDOWTITLE eq *mock_api.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping Model API processes..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq model_api.py*" 2^>nul >> .app_processes.bat
+echo taskkill /f /fi "IMAGENAME eq python.exe" /fi "WINDOWTITLE eq *model_api.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping Dashboard processes..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq streamlit run app\dashboard\dashboard.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping Social Media Processor..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq data_processor.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping Social Media Auth UI..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq streamlit run app\social_media\social_media_auth.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping Social Media Data UI..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq streamlit run app\social_media\social_media_data.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping CSV Upload UI..." >> .app_processes.bat
+echo taskkill /f /fi "WINDOWTITLE eq streamlit run app\social_media\csv_data_upload.py*" 2^>nul >> .app_processes.bat
+echo call :print_blue "Stopping any remaining Streamlit processes..." >> .app_processes.bat
+echo taskkill /f /fi "IMAGENAME eq streamlit.exe" 2^>nul >> .app_processes.bat
+echo call :print_green "All services stopped." >> .app_processes.bat
+echo exit /b 0 >> .app_processes.bat
+echo. >> .app_processes.bat
+echo :print_blue >> .app_processes.bat
+echo echo [INFO] %%~1 >> .app_processes.bat
+echo goto :eof >> .app_processes.bat
+echo. >> .app_processes.bat
+echo :print_green >> .app_processes.bat
+echo echo [SUCCESS] %%~1 >> .app_processes.bat
+echo goto :eof >> .app_processes.bat
 
 call :print_header "Fire Brigade Sentiment Analysis Application is running!"
 echo.
-call :print_blue "Mock API:     http://localhost:5001"
-call :print_blue "Model API:    http://localhost:5002"
-call :print_blue "Dashboard:    http://localhost:8501"
+call :print_blue "Mock API:                  http://localhost:5001"
+call :print_blue "Model API:                 http://localhost:5002"
+call :print_blue "Main Dashboard:            http://localhost:8501"
+call :print_blue "Social Media Auth:         http://localhost:8503"
+call :print_blue "Social Media Dashboard:    http://localhost:8504"
+call :print_blue "CSV Data Upload:           http://localhost:8505"
 echo.
 call :print_yellow "Run stop_app.bat to stop all services."
 echo.
