@@ -229,7 +229,7 @@ def compare_models(text):
         return {
             "text": text,
             "models": {},
-            "available_models": [],
+            "count": 0,
             "error": str(e)
         }
 

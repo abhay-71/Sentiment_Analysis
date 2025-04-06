@@ -13,20 +13,24 @@ This application:
 ## Features
 
 - **Mock API**: Simulates a fire brigade incident reporting API
-- **Multiple Sentiment Models**: Choose between domain-specific, social media-based, or hybrid approaches
+- **Multiple Sentiment Models**: Choose between domain-specific, social media-based, hybrid, or expanded approaches
 - **Interactive Dashboard**: Visualization of sentiment trends and statistics
 - **Database**: SQLite storage for incidents and analysis results
 - **Deployment**: Ready for Render.com deployment
 
 ## Sentiment Models
 
-The application includes three sentiment analysis models:
+The application includes multiple sentiment analysis models:
 
-1. **Synthetic Model (Default)**: Trained on synthetic templates specific to fire brigade domain. Provides 80% accuracy on domain-specific text.
+1. **Synthetic Model**: Trained on synthetic templates specific to fire brigade domain. Provides 80% accuracy on domain-specific text.
 
 2. **Twitter Model**: Trained on real Twitter data with diverse contexts. Better for general expressions but less accurate (40%) on domain-specific content.
 
 3. **Hybrid Model**: A combined approach that leverages both models based on text domain and confidence scores. Provides 77.8% accuracy on domain text with improved generalization.
+
+4. **Domain-Aware Model**: Uses specialized classification for each emergency service domain, offering improved accuracy (85-92%) and better performance with neutral sentiments.
+
+5. **Expanded Model**: Trained on multiple large datasets (160,000+ tweets) with 73.5% overall accuracy. Best for general-purpose sentiment analysis across multiple domains.
 
 ## Components
 
@@ -39,6 +43,8 @@ The application includes three sentiment analysis models:
 ## Setup Instructions
 
 ### Quick Start
+
+#### On Linux/Mac:
 
 The easiest way to get started is to use the start script:
 
@@ -56,6 +62,23 @@ To stop the application:
 ./stop_app.sh
 ```
 
+#### On Windows:
+
+Use the provided batch files to start and stop the application:
+
+```
+# Start all components (Mock API, Model API, Dashboard)
+start_app.bat
+```
+
+To stop the application:
+
+```
+stop_app.bat
+```
+
+The batch files perform the same functions as their shell script counterparts and include additional checks for the expanded sentiment model.
+
 ### Manual Setup
 
 For more control, you can set up and run each component separately:
@@ -68,8 +91,13 @@ For more control, you can set up and run each component separately:
 
 2. Create and activate a virtual environment:
    ```bash
+   # On Linux/Mac:
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate
+   
+   # On Windows:
+   python -m venv venv
+   venv\Scripts\activate
    ```
 
 3. Install dependencies:
@@ -79,7 +107,11 @@ For more control, you can set up and run each component separately:
 
 4. Setup environment variables:
    ```bash
+   # On Linux/Mac:
    cp .env.example .env
+   
+   # On Windows:
+   copy .env.example .env
    ```
    Edit the `.env` file with your configuration.
 
@@ -99,7 +131,12 @@ For more control, you can set up and run each component separately:
 ## Using the Dashboard
 
 1. Access the dashboard at http://localhost:8501
-2. Use the model selection dropdown in the sidebar to switch between sentiment models
+2. Use the model selection dropdown in the sidebar to switch between sentiment models:
+   - Synthetic (Fire Brigade Domain)
+   - Twitter (General Social Media)
+   - Hybrid (Combined Approach)
+   - Domain-Aware (Enhanced Model)
+   - Expanded (Multi-Dataset General Model)
 3. Enter text in the "Sentiment Prediction Tool" to analyze sentiment
 4. Check "Compare all models" to see predictions from all available models side by side
 
@@ -134,6 +171,8 @@ Additional documentation is available in the `DOCS` directory:
 | Synthetic | 80% | 33.3% | Fire brigade specific text |
 | Twitter | 40% | 33.3% | Social media expressions |
 | Hybrid | 77.8% | 25% | Balance of domain knowledge and real-world patterns |
+| Domain-Aware | 85-92% | 60% | Emergency services domain with improved neutral detection |
+| Expanded | 47.5% | 73.5% | General-purpose sentiment across multiple domains |
 
 ## Deployment
 

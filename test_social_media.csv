@@ -1,0 +1,31 @@
+platform,post_id,username,content,timestamp,likes,shares,comments
+twitter,1001,firefighter42,"Just responded to a major incident downtown. Everyone safe! #emergency #response",2023-04-10T15:30:00,45,12,8
+facebook,2001,citysafety,"Community safety meeting this Thursday at City Hall. Learn about our new emergency protocols.",2023-04-11T09:15:00,67,23,15
+twitter,1002,rescueteam7,"Training exercise today was challenging but successful. #teamwork #emergency",2023-04-12T14:45:00,32,5,3
+linkedin,3001,emergencyservices,"Proud to announce our department has received new equipment funding that will help us better serve the community.",2023-04-13T11:20:00,120,35,27
+twitter,1003,dispatch911,"Reminder: If you see smoke, call 911 immediately. Don't assume someone else has called. #safety",2023-04-14T08:10:00,89,56,12
+facebook,2002,firesafety,"Check your smoke detectors monthly! This simple action can save lives. Here's how to properly test them...",2023-04-15T16:30:00,105,42,31
+twitter,1004,emt_responder,"Difficult day on the job, but we made a difference. Remember to appreciate every moment. #ems #firstresponder",2023-04-16T19:22:00,76,18,24
+facebook,2003,emergencyprep,"Hurricane season is approaching. Is your family prepared? Download our emergency checklist at the link below.",2023-04-17T10:05:00,113,67,29
+linkedin,3002,disasterrelief,"Seeking volunteers for our upcoming disaster preparedness training. No experience necessary, we will provide all training.",2023-04-18T13:40:00,95,41,53
+twitter,1005,firechief,"Communication is key during emergencies. Make sure your family has a plan and meeting point. #preparedness",2023-04-19T11:15:00,64,38,7
+facebook,2004,firebrigade,"Our annual fundraiser was a huge success! Thanks to everyone who attended and supported our department.",2023-04-20T09:30:00,156,74,42
+twitter,1006,safetyfirst,"High winds expected this weekend. Secure loose items around your property to prevent them becoming projectiles. #weathersafety",2023-04-21T12:45:00,112,86,19
+linkedin,3003,emergencymanagement,"New research on evacuation procedures shows significant improvement in evacuation times with proper planning.",2023-04-22T14:20:00,87,32,26
+facebook,2005,communitysafety,"Thank you to all who attended our CPR training yesterday. You now have the skills to potentially save a life!",2023-04-23T08:55:00,93,28,37
+twitter,1007,firefightertraining,"Completed advanced vehicle extrication training today. These skills will help us in critical situations. #training",2023-04-24T17:10:00,54,21,8
+facebook,2006,emergencyawareness,"Flash flood warning in effect for southern counties. Avoid low-lying areas and stay tuned to local alerts.",2023-04-25T07:30:00,128,95,42
+linkedin,3004,safetyprofessional,"Implemented new response protocols that have reduced our average response time by 23%. Proud of our team's dedication.",2023-04-26T10:15:00,147,53,36
+twitter,1008,ems_dispatch,"Busy night for our team. Multiple accidents due to icy conditions. Please drive carefully everyone. #winterdriving",2023-04-27T22:40:00,83,47,13
+facebook,2007,fireprevention,"Our station is hosting an open house next Saturday! Bring the kids to see the trucks and learn about fire safety.",2023-04-28T13:25:00,167,108,58
+twitter,1009,rescuecaptain,"Challenging water rescue operation completed successfully. All victims safe. Excellent teamwork from all agencies involved!",2023-04-29T16:50:00,198,76,31
+linkedin,3005,emergencycomms,"New integrated communication system deployed today. This will improve coordination between all emergency services.",2023-04-30T11:05:00,112,39,28
+facebook,2008,safetyeducation,"School visits this week were a success! Over 500 children learned about fire safety and what to do in an emergency.",2023-05-01T14:30:00,87,41,22
+twitter,1010,disasterresponse,"Deployed to assist with flood response in neighboring county. Working around the clock to help affected residents.",2023-05-02T09:15:00,156,92,47
+facebook,2009,firerescue,"Congratulations to our newest graduates from the Fire Academy! Welcome to the service and stay safe out there.",2023-05-03T16:40:00,213,87,104
+linkedin,3006,emergencyleadership,"Looking to connect with other emergency service leaders to share best practices in community resilience planning.",2023-05-04T13:20:00,76,28,35
+twitter,1011,paramedic_life,"When seconds count, proper training matters. Proud of our team's rapid response to today's incident. #paramedicine",2023-05-05T19:10:00,89,34,12
+facebook,2010,communityoutreach,"Free smoke detector installation program continues next week. Contact us to schedule an appointment for your home.",2023-05-06T10:35:00,73,52,31
+twitter,1012,firestation8,"Station 8 crew rescued a family of ducks from a storm drain today. Not all heroes wear capes! #animalrescue",2023-05-07T15:45:00,324,198,57
+linkedin,3007,emergencytech,"Testing new drone technology for search and rescue operations. Initial results are very promising.",2023-05-08T11:25:00,134,48,42
+facebook,2011,safetytips,"Heat wave expected next week. Remember to stay hydrated and check on elderly neighbors and those without AC.",2023-05-09T08:50:00,92,76,28 

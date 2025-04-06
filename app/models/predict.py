@@ -3,7 +3,7 @@ Prediction Module for Sentiment Analysis
 
 This module contains functions for loading the trained model
 and making sentiment predictions on new incident reports.
-Supports multiple model types: synthetic, twitter, and hybrid.
+Supports multiple model types: synthetic, twitter, hybrid, and expanded.
 """
 import os
 import sys
@@ -23,6 +23,11 @@ SYNTHETIC_VECTORIZER_PATH = os.path.join(os.path.dirname(__file__), "enhanced_ve
 TWITTER_MODEL_PATH = os.path.join(os.path.dirname(__file__), "twitter_sentiment_model.pkl")
 TWITTER_VECTORIZER_PATH = os.path.join(os.path.dirname(__file__), "twitter_vectorizer.pkl")
 HYBRID_MODEL_PATH = os.path.join(os.path.dirname(__file__), "hybrid_sentiment_model.pkl")
+# Add expanded model paths
+EXPANDED_MODEL_PATH = os.path.join(os.path.dirname(__file__), "expanded_sentiment_model.pkl")
+EXPANDED_VECTORIZER_PATH = os.path.join(os.path.dirname(__file__), "expanded_vectorizer.pkl")
+# Add ensemble model path
+ENSEMBLE_MODEL_PATH = os.path.join(os.path.dirname(__file__), "ensemble_sentiment_model.pkl")
 
 # Configure logging
 logging.basicConfig(
@@ -36,7 +41,9 @@ models = {
     "default": {"loaded": False, "model": None, "vectorizer": None},
     "synthetic": {"loaded": False, "model": None, "vectorizer": None},
     "twitter": {"loaded": False, "model": None, "vectorizer": None},
-    "hybrid": {"loaded": False, "model": None, "vectorizer": None}
+    "hybrid": {"loaded": False, "model": None, "vectorizer": None},
+    "expanded": {"loaded": False, "model": None, "vectorizer": None},  # Add expanded model
+    "ensemble": {"loaded": False, "model": None, "vectorizer": None}   # Add ensemble model
 }
 
 # Load default model (backward compatibility)
@@ -54,7 +61,7 @@ def load_model(model_type="default"):
     Load a specific model type.
     
     Args:
-        model_type (str): Type of model to load ('default', 'synthetic', 'twitter', or 'hybrid')
+        model_type (str): Type of model to load ('default', 'synthetic', 'twitter', 'hybrid', 'expanded', or 'ensemble')
         
     Returns:
         bool: True if model loaded successfully, False otherwise
@@ -73,6 +80,12 @@ def load_model(model_type="default"):
         elif model_type == "hybrid":
             models[model_type]["model"] = joblib.load(HYBRID_MODEL_PATH)
             # Hybrid model has its own internal vectorizers
+        elif model_type == "expanded":
+            models[model_type]["vectorizer"] = joblib.load(EXPANDED_VECTORIZER_PATH)
+            models[model_type]["model"] = joblib.load(EXPANDED_MODEL_PATH)
+        elif model_type == "ensemble":
+            models[model_type]["model"] = joblib.load(ENSEMBLE_MODEL_PATH)
+            # Ensemble model doesn't need a vectorizer as it uses other models
         else:
             # Default model already attempted to load at module import
             if not models["default"]["loaded"]:
@@ -109,6 +122,14 @@ def get_available_models():
     if os.path.exists(HYBRID_MODEL_PATH):
         available.append("hybrid")
         
+    # Check expanded model
+    if os.path.exists(EXPANDED_MODEL_PATH) and os.path.exists(EXPANDED_VECTORIZER_PATH):
+        available.append("expanded")
+        
+    # Check ensemble model
+    if os.path.exists(ENSEMBLE_MODEL_PATH):
+        available.append("ensemble")
+        
     # Always include default if it's loaded
     if models["default"]["loaded"]:
         available.append("default")
@@ -121,13 +142,13 @@ def predict_sentiment(text, model_type="default"):
     
     Args:
         text (str): Input text
-        model_type (str): Type of model to use ('default', 'synthetic', 'twitter', or 'hybrid')
+        model_type (str): Type of model to use ('default', 'synthetic', 'twitter', 'hybrid', 'expanded', or 'ensemble')
         
     Returns:
         tuple: (sentiment_value, sentiment_label, confidence, model_used)
     """
     # For backward compatibility
-    if model_type not in ["default", "synthetic", "twitter", "hybrid"]:
+    if model_type not in ["default", "synthetic", "twitter", "hybrid", "expanded", "ensemble"]:
         logger.warning(f"Unknown model type: {model_type}. Using default.")
         model_type = "default"
     
@@ -139,6 +160,15 @@ def predict_sentiment(text, model_type="default"):
             return 0, "neutral", 0.0, None
     
     try:
+        # Handle ensemble model separately as it has a different interface
+        if model_type == "ensemble":
+            ensemble_model = models[model_type]["model"]
+            # Get ensemble prediction
+            sentiment_value, sentiment_label, confidence, model_used = ensemble_model.predict(text)
+            
+            logger.info(f"Ensemble model predicted: {sentiment_label} (confidence: {confidence:.2f})")
+            return sentiment_value, sentiment_label, confidence, model_used
+            
         # Handle hybrid model separately as it has a different interface
         if model_type == "hybrid":
             hybrid_model = models[model_type]["model"]
@@ -154,7 +184,7 @@ def predict_sentiment(text, model_type="default"):
         
         # For other models, use standard prediction
         # Preprocess text (use appropriate preprocessor based on model)
-        if model_type == "twitter":
+        if model_type == "twitter" or model_type == "expanded":
             processed_text = extract_features([text])[0]
         else:
             processed_text = preprocess_text(text)

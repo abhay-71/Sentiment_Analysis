@@ -124,6 +124,8 @@ def main():
         "twitter": "Twitter (General Social Media)",
         "hybrid": "Hybrid (Combined Approach)",
         "domain_aware": "Domain-Aware (Enhanced Model)",
+        "expanded": "Expanded (Multi-Dataset General Model)",
+        "ensemble": "Ensemble (Combined Strengths)",
         "default": "Default Model"
     }
     
@@ -148,6 +150,10 @@ def main():
         st.sidebar.info("The hybrid model combines both approaches, weighing predictions based on domain specificity and confidence scores (77.8% accuracy on domain text).")
     elif st.session_state.selected_model == "domain_aware":
         st.sidebar.info("The domain-aware model uses specialized classification for each emergency service domain, offering improved accuracy (85-92%) and better performance with neutral sentiments.")
+    elif st.session_state.selected_model == "expanded":
+        st.sidebar.info("The expanded model is trained on multiple large datasets (160,000+ tweets) and can handle a wide variety of domains with 73.5% overall accuracy, though performance varies by domain (100% on social media, 47.5% on emergency services).")
+    elif st.session_state.selected_model == "ensemble":
+        st.sidebar.info("The ensemble model combines the strengths of all available models using weighted voting based on each model's performance. It offers the best overall performance for emergency services text by prioritizing the most confident predictions from models that excel in specific sentiment categories.")
     
     # Sentiment prediction tool
     st.sidebar.header("Sentiment Prediction Tool")

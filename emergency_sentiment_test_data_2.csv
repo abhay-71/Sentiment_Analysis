@@ -1,0 +1,41 @@
+Text,Sentiment,Rationale
+Quick police response helped catch the burglary suspect within 10 minutes.,Positive,Fast and effective police action.
+Appreciate the emergency dispatcher who guided me until help arrived.,Positive,Thankful for dispatcher's assistance.
+Huge thanks to the paramedics who treated my mom during the heatwave.,Positive,Gratitude toward responders.
+The coordinated wildfire evacuation saved dozens of lives.,Positive,Efficient coordination praised.
+Ambulance reached in 5 minutes – couldn’t have asked for better service.,Positive,Rapid response appreciated.
+Police officers delivered food to stranded residents during storm.,Positive,Support beyond normal duties.
+The rescue dog located a missing child in under two hours!,Positive,Successful search operation.
+The Red Cross and emergency units set up shelters within hours.,Positive,Quick relief response.
+The new emergency app really works – got a live alert seconds before sirens.,Positive,Tech-enabled safety success.
+Fire team saved a historic building from destruction.,Positive,Rescue of valuable structure.
+No ambulance available for miles – tragic delay in medical help.,Negative,Lack of emergency resources.
+"Fire truck broke down en route to the site, delaying response time.",Negative,Mechanical failure in crisis.
+Still no update on missing persons after 24 hours – very upsetting.,Negative,Prolonged uncertainty.
+Emergency alerts failed to go off during the earthquake.,Negative,Tech failure.
+Witnesses claim the fire hydrants weren’t working.,Negative,Infrastructure issue.
+Operator was rude and dismissive during the call.,Negative,Poor communication from services.
+Ambulance was sent to the wrong address due to GPS error.,Negative,Technical failure and misdirection.
+Police used excessive force during the evacuation.,Negative,Aggressive action criticized.
+No rescue attempt was made due to jurisdiction issues.,Negative,Red tape over action.
+Families claim they were not informed about evacuation plans.,Negative,Lack of communication.
+Ambulance service reviewed their fleet readiness this quarter.,Neutral,Internal review report.
+All fire personnel participated in standard breathing apparatus training.,Neutral,Training info.
+Weather forecast includes a high fire risk advisory.,Neutral,Factual advisory.
+The fire department shared fire prevention tips online.,Neutral,Educational announcement.
+City is investing in 10 new patrol vehicles for emergency use.,Neutral,Budget/fleet info.
+Disaster readiness event scheduled next weekend downtown.,Neutral,Event announcement.
+The emergency radio network was upgraded this month.,Neutral,Technical infrastructure update.
+Local officials tested the tsunami siren system today.,Neutral,Test procedure.
+First responders attended a stress management seminar.,Neutral,Support-focused update.
+Paramedics are now equipped with body cams as part of a pilot program.,Neutral,Policy update.
+Evacuation during the chemical leak was smooth and well-executed.,Positive,Praises execution.
+People had to break into the fire station to get help – unacceptable!,Negative,Desperate measures due to delay.
+"Thanks to the quick response, no lives were lost during the flash flood.",Positive,Life-saving outcome.
+Tensions rose after ambulances were diverted without explanation.,Negative,Poor management leads to unrest.
+The emergency app notified residents 10 minutes before the tornado hit.,Positive,Advanced warning appreciated.
+Crews are still assessing fire damage at the old refinery.,Neutral,Status update.
+Police chased the suspect into a residential area – no injuries reported.,Neutral,Factual report.
+Rescue boats are on standby near the river basin ahead of the storm.,Neutral,Preparedness update.
+Helpline lines were jammed for over an hour during peak emergency.,Negative,Lack of capacity criticized.
+A fire drill was carried out in all high-rise buildings today.,Neutral,Routine drill.

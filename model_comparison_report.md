@@ -1,154 +1,195 @@
-# Sentiment Analysis Models Comparison Report
+# Sentiment Analysis Model Comparison Report
 
-## Model Overview
+## Overview
 
-This report compares three sentiment analysis models developed for the fire brigade incident analysis application:
+This report compares the performance of all available sentiment models on emergency services text data.
 
-1. **Synthetic Model**: Trained on synthetic templates specific to fire brigade domain
-2. **Twitter Model**: Trained on real Twitter data with diverse contexts
-3. **Hybrid Model**: A combined approach that leverages both models based on text domain and confidence scores
+**Test Dataset:** emergency_sentiment_test_data_2.csv  
+**Number of Samples:** 40  
+**Generated on:** 2025-04-06 13:17:05
 
-## Performance Comparison
+## Model Ranking by Accuracy
 
-### Overall Accuracy
+| Rank | Model | Accuracy | F1 Score | Error Rate |
+|------|-------|----------|----------|------------|
+| 1 | Default | 0.5750 | 0.5667 | 0.4250 |
+| 2 | Synthetic | 0.5500 | 0.5457 | 0.4500 |
+| 3 | Expanded | 0.4500 | 0.4369 | 0.5500 |
+| 4 | Twitter | 0.2750 | 0.2699 | 0.7250 |
 
-| Model | Overall Accuracy | Fire Brigade Domain | General Text |
-|-------|------------------|---------------------|--------------|
-| Synthetic Model | 76.92% (10/13) | 88.89% (8/9) | 50.00% (2/4) |
-| Twitter Model | 38.46% (5/13) | 33.33% (3/9) | 50.00% (2/4) |
-| Hybrid Model | 61.54% (8/13) | 77.78% (7/9) | 25.00% (1/4) |
+## Detailed Performance by Model
 
-### Performance by Sentiment Type
+### Default Model
 
-#### Synthetic Model
-- **Positive**: 3/4 correct (75.00%)
-- **Neutral**: 3/3 correct (100.00%)
-- **Negative**: 4/6 correct (66.67%)
+- **Accuracy:** 0.5750
+- **F1 Score:** 0.5667
+- **Error Rate:** 0.4250 (17 errors)
 
-#### Twitter Model
-- **Positive**: 3/4 correct (75.00%)
-- **Neutral**: 0/3 correct (0.00%)
-- **Negative**: 2/6 correct (33.33%)
+**Confusion Matrix:**
 
-#### Hybrid Model
-- **Positive**: 4/4 correct (100.00%)
-- **Neutral**: 1/3 correct (33.33%)
-- **Negative**: 3/6 correct (50.00%)
+![Default Confusion Matrix](plots/default_confusion_matrix.png)
 
-## Strengths and Weaknesses
+**Performance by Sentiment Class:**
+
+| Sentiment | Precision | Recall | F1-Score | Support |
+|-----------|-----------|--------|----------|--------|
+| Negative | 0.5556 | 0.3846 | 0.4545 | 13.0 |
+| Neutral | 0.6000 | 0.6429 | 0.6207 | 14.0 |
+| Positive | 0.5625 | 0.6923 | 0.6207 | 13.0 |
+
+**Error Analysis:**
+
+| Error Type | Count | Percentage | Avg Confidence |
+|------------|-------|------------|---------------|
+| Positive as Negative | 2 | 11.76% | 0.1872 |
+| Positive as Neutral | 2 | 11.76% | 0.1585 |
+| Negative as Neutral | 4 | 23.53% | 0.1585 |
+| Negative as Positive | 4 | 23.53% | 0.1979 |
+| Neutral as Positive | 3 | 17.65% | 0.1655 |
+| Neutral as Negative | 2 | 11.76% | 0.1754 |
+
+- High Confidence Errors (>0.7): 0
+- Low Confidence Correct Predictions (<0.5): 23
+
+---
 
 ### Synthetic Model
 
-**Strengths:**
-- Excellent performance on domain-specific text (88.89%)
-- Perfect performance on neutral sentiment (100%)
-- Good overall accuracy (76.92%)
-- Strong confidence scores for domain text
+- **Accuracy:** 0.5500
+- **F1 Score:** 0.5457
+- **Error Rate:** 0.4500 (18 errors)
 
-**Weaknesses:**
-- Limited generalization to non-domain text (50%)
-- May not adapt well to novel expressions
+**Confusion Matrix:**
+
+![Synthetic Confusion Matrix](plots/synthetic_confusion_matrix.png)
+
+**Performance by Sentiment Class:**
+
+| Sentiment | Precision | Recall | F1-Score | Support |
+|-----------|-----------|--------|----------|--------|
+| Negative | 0.5833 | 0.5385 | 0.5600 | 13.0 |
+| Neutral | 0.6000 | 0.4286 | 0.5000 | 14.0 |
+| Positive | 0.5000 | 0.6923 | 0.5806 | 13.0 |
+
+**Error Analysis:**
+
+| Error Type | Count | Percentage | Avg Confidence |
+|------------|-------|------------|---------------|
+| Positive as Negative | 2 | 11.11% | 0.1720 |
+| Positive as Neutral | 2 | 11.11% | 0.1655 |
+| Negative as Positive | 4 | 22.22% | 0.2378 |
+| Negative as Neutral | 2 | 11.11% | 0.2260 |
+| Neutral as Negative | 3 | 16.67% | 0.1902 |
+| Neutral as Positive | 5 | 27.78% | 0.2136 |
+
+- High Confidence Errors (>0.7): 0
+- Low Confidence Correct Predictions (<0.5): 20
+
+---
+
+### Expanded Model
+
+- **Accuracy:** 0.4500
+- **F1 Score:** 0.4369
+- **Error Rate:** 0.5500 (22 errors)
+
+**Confusion Matrix:**
+
+![Expanded Confusion Matrix](plots/expanded_confusion_matrix.png)
+
+**Performance by Sentiment Class:**
+
+| Sentiment | Precision | Recall | F1-Score | Support |
+|-----------|-----------|--------|----------|--------|
+| Negative | 0.4500 | 0.6923 | 0.5455 | 13.0 |
+| Neutral | 0.3846 | 0.3571 | 0.3704 | 14.0 |
+| Positive | 0.5714 | 0.3077 | 0.4000 | 13.0 |
+
+**Error Analysis:**
+
+| Error Type | Count | Percentage | Avg Confidence |
+|------------|-------|------------|---------------|
+| Positive as Negative | 5 | 22.73% | 0.2102 |
+| Positive as Neutral | 4 | 18.18% | 0.2399 |
+| Negative as Neutral | 4 | 18.18% | 0.2308 |
+| Neutral as Negative | 6 | 27.27% | 0.2335 |
+| Neutral as Positive | 3 | 13.64% | 0.3012 |
+
+- High Confidence Errors (>0.7): 0
+- Low Confidence Correct Predictions (<0.5): 13
+
+---
 
 ### Twitter Model
 
-**Strengths:**
-- Good performance on positive sentiment (75%)
-- Trained on diverse real-world language
-- Better with colloquial expressions
-- Equal performance on general text as synthetic model (50%)
+- **Accuracy:** 0.2750
+- **F1 Score:** 0.2699
+- **Error Rate:** 0.7250 (29 errors)
 
-**Weaknesses:**
-- Poor overall accuracy (38.46%)
-- Struggles with domain-specific text (33.33%)
-- Completely fails on neutral sentiment (0%)
-- Lower confidence scores overall
+**Confusion Matrix:**
 
-### Hybrid Model
+![Twitter Confusion Matrix](plots/twitter_confusion_matrix.png)
 
-**Strengths:**
-- Perfect performance on positive sentiment (100%)
-- Good performance on domain-specific text (77.78%)
-- Successfully combines strengths of both models
-- Makes intelligent choices based on domain detection
-- Improved performance on negative sentiment over Twitter model
+**Performance by Sentiment Class:**
 
-**Weaknesses:**
-- Struggles with general text (25%)
-- Lower accuracy on neutral sentiment (33.33%)
-- Overall performance lower than synthetic model alone
-- Added complexity in implementation
+| Sentiment | Precision | Recall | F1-Score | Support |
+|-----------|-----------|--------|----------|--------|
+| Negative | 0.4000 | 0.3077 | 0.3478 | 13.0 |
+| Neutral | 0.2000 | 0.1429 | 0.1667 | 14.0 |
+| Positive | 0.2500 | 0.3846 | 0.3030 | 13.0 |
 
-## Decision Logic Analysis
+**Error Analysis:**
 
-The hybrid model implements several key decision strategies:
+| Error Type | Count | Percentage | Avg Confidence |
+|------------|-------|------------|---------------|
+| Positive as Neutral | 5 | 17.24% | 0.2087 |
+| Positive as Negative | 3 | 10.34% | 0.3374 |
+| Negative as Positive | 6 | 20.69% | 0.2092 |
+| Negative as Neutral | 3 | 10.34% | 0.2065 |
+| Neutral as Negative | 3 | 10.34% | 0.2560 |
+| Neutral as Positive | 9 | 31.03% | 0.2787 |
 
-1. **Domain Detection**: Uses keyword analysis to determine if text is fire brigade specific
-2. **Confidence Weighting**: Adjusts the influence of each model based on domain specificity
-3. **Low Confidence Handling**: Defaults to neutral when both models have low confidence
-4. **Non-Neutral Preference**: In case of ties, gives preference to non-neutral predictions
+- High Confidence Errors (>0.7): 1
+- Low Confidence Correct Predictions (<0.5): 11
 
-### Model Selection Patterns
+---
 
-In our test examples, the hybrid model made the following choices:
-- Used Twitter model for 3 examples (23.1%)
-- Used Synthetic model for 5 examples (38.5%) 
-- Defaulted to low confidence in 3 examples (23.1%)
-- Used the twitter_non_neutral logic in 0 examples (0%)
-- Used the synthetic_non_neutral logic in 2 examples (15.4%)
+## Comparative Analysis
 
-## Examples Highlights
+![Model Performance Comparison](plots/model_performance_comparison.png)
 
-### Where Hybrid Model Improved
+![Sentiment Performance Heatmap](plots/sentiment_performance_heatmap.png)
 
-Example: "Today's shift was exhausting with multiple emergency calls"
-- Twitter model: ✗ Neutral (confidence: 0.1670)
-- Synthetic model: ✓ Negative (confidence: 0.2377)
-- Hybrid model: ✓ Negative (confidence: 0.2377)
-- Logic: synthetic_non_neutral
+## Key Insights
 
-Example: "Our new thermal imaging cameras are making search and rescue much more effective"
-- Twitter model: ✗ Negative (confidence: 0.2760)
-- Synthetic model: ✓ Positive (confidence: 0.4073)
-- Hybrid model: ✓ Positive (confidence: 0.4073)
-- Logic: synthetic (domain detection)
+1. **Best Overall Model:** Default with 0.5750 accuracy
 
-### Where Hybrid Model Failed
+2. **Best Model by Sentiment Class:**
+   - Negative: Synthetic (F1-Score: 0.5600)
+   - Neutral: Default (F1-Score: 0.6207)
+   - Positive: Default (F1-Score: 0.6207)
 
-Example: "The service was terrible and I will never come back" 
-- Twitter model: ✓ Negative (confidence: 0.1630)
-- Synthetic model: ✗ Neutral (confidence: 0.1636)
-- Hybrid model: ✗ Neutral (confidence: 0.1636) 
-- Logic: low_confidence_default
+3. **Common Error Patterns:**
+   - Neutral as Positive: 20 instances across all models
+   - Negative as Positive: 14 instances across all models
+   - Neutral as Negative: 14 instances across all models
 
-Example: "It's an okay option if you don't have alternatives"
-- Twitter model: ✗ Positive (confidence: 0.3106)
-- Synthetic model: ✓ Neutral (confidence: 0.1682)
-- Hybrid model: ✗ Positive (confidence: 0.3106)
-- Logic: twitter (higher confidence score)
+4. **Confidence Analysis:**
+   - Models tend to be appropriately calibrated in their predictions
+   - High number of correct predictions with low confidence
 
 ## Recommendations
 
-Based on the comparative analysis, we recommend:
+Based on the analysis above, here are recommendations for model selection and improvement:
 
-1. **Use the Synthetic Model for Production**:
-   - Best overall accuracy
-   - Excellent performance on domain-specific text
-   - Provides the most stable predictions for fire brigade applications
+1. **For General Use:** Use the Default model as it has the best overall performance
 
-2. **Further Hybrid Model Improvements**:
-   - Adjust confidence thresholds to favor synthetic model more heavily
-   - Improve domain detection with more sophisticated NLP techniques
-   - Fine-tune weighting mechanism based on additional validation data
-   - Consider ensemble voting rather than confidence-based selection
+2. **For Specific Sentiment Detection:**
+   - Use Synthetic for detecting negative sentiment
+   - Use Default for detecting neutral sentiment
+   - Use Default for detecting positive sentiment
 
-3. **Next Steps for Model Development**:
-   - Collect domain-specific labeled data for further training
-   - Implement active learning to improve from user feedback
-   - Consider fine-tuning Twitter model on domain-specific examples
-   - Explore transformer-based models like BERT for improved language understanding
-
-## Conclusion
-
-While the hybrid model showed promise by achieving perfect positive sentiment detection and improving over the Twitter model's performance, the synthetic model remains the most reliable choice for the fire brigade application in its current state. The synthetic model's superior performance on domain-specific text (88.89%) makes it the most suitable choice for production use.
-
-The hybrid approach demonstrates the potential for combining models with complementary strengths, but requires further refinement of its decision logic to outperform the synthetic model consistently. For future development, collecting more domain-specific labeled data would likely yield the most significant improvements to any of these approaches. 
+3. **Model Improvement Opportunities:**
+   - Focus on improving detection of Neutral sentiment across all models
+   - Consider ensemble methods to combine strengths of different models
+   - Add more domain-specific training data for emergency services

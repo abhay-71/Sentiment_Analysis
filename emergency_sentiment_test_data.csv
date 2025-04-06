@@ -1,0 +1,41 @@
+Text,Sentiment,Rationale
+Paramedics arrived within minutes and stabilized the patient before rushing to the hospital.,Positive,Quick and successful response.
+"The police evacuated the area in time, preventing further damage.",Positive,Preventative success.
+Thanks to the 911 operator who stayed on the line and kept me calm!,Positive,Gratitude and successful service.
+Community volunteers and fire crews worked together to clear the flood-hit area.,Positive,Collaboration and positive outcome.
+Firefighters rescued a dog trapped under debris after the quake.,Positive,Successful rescue effort.
+Swift action by ambulance team saved the toddler's life.,Positive,Life-saving success story.
+Emergency response was so smooth during the drill today!,Positive,Efficient emergency drill.
+Police managed to de-escalate the situation peacefully.,Positive,Positive outcome from intervention.
+Medical teams from nearby towns offered help within hours.,Positive,Support and aid arrived quickly.
+Emergency services distributed food and water within 24 hours of the flood.,Positive,Rapid relief action.
+Massive explosion at the chemical plant—several casualties reported.,Negative,High-risk event with casualties.
+Firefighters are still struggling to control the blaze after 5 hours.,Negative,Ongoing struggle implies distress.
+Emergency services were delayed due to heavy traffic in the area.,Negative,Frustration over delay.
+Several injured after the bus collided with a police van on the highway.,Negative,Injury and accident highlight negativity.
+Victim bled out because ambulance arrived 30 minutes late.,Negative,Severe delay with tragic result.
+Police failed to respond to multiple 911 calls during the break-in.,Negative,Service failure.
+Fire engine ran out of water mid-operation—residents outraged.,Negative,Operational failure.
+The rescue helicopter was grounded due to lack of fuel.,Negative,Unpreparedness during emergency.
+Only two firefighters showed up for a 3-alarm fire.,Negative,Understaffing in crisis.
+Miscommunication led to wrong site evacuation during the fire.,Negative,Poor coordination.
+A routine fire safety drill was conducted at the community center today.,Neutral,"Factual, informative."
+Reports of smoke turned out to be a false alarm. All units are returning.,Neutral,"Just an update, no emotional tone."
+Emergency numbers are updated on the city’s official website.,Neutral,Administrative update.
+Police increased patrols in the area starting this week.,Neutral,Preventive measure announcement.
+New ambulance routes were tested today across the district.,Neutral,Operational info.
+Paramedics participated in a joint training session with the fire department.,Neutral,Non-emotional news.
+Weather alert issued; emergency services are on standby.,Neutral,Preparedness update.
+City council discussed new emergency response policies today.,Neutral,Informational.
+Medical tents are being set up near the stadium for the event.,Neutral,Routine prep for event.
+Drill simulations will be held in 3 cities over the next month.,Neutral,Factual notice.
+Helicopters rescued over 30 people from floodwaters today.,Positive,Successful large-scale rescue.
+No injuries reported in the early morning apartment fire.,Positive,Positive outcome in potential disaster.
+Several units responded to the factory fire overnight.,Neutral,"Factual update, no sentiment."
+Ambulance sirens woke up the whole neighborhood last night.,Negative,Noise/disturbance-related frustration.
+Police car collided with another vehicle during pursuit.,Negative,Unintended incident.
+Evacuation orders were lifted after the situation was deemed safe.,Neutral,Status update.
+Rescue teams are searching for survivors in the collapsed building.,Neutral,Ongoing status.
+Local team is assessing flood damage to emergency facilities.,Neutral,Assessment info.
+New training protocols introduced for emergency medics.,Neutral,Training update.
+K9 units joined the search after last night’s explosion.,Neutral,Tactical update.

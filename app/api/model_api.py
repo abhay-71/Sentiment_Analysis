@@ -2,7 +2,7 @@
 Sentiment Analysis Model API
 
 This module provides a Flask API for serving sentiment analysis predictions.
-Supports multiple model types: synthetic, twitter, hybrid, and domain-aware.
+Supports multiple model types: synthetic, twitter, hybrid, domain-aware, and expanded.
 """
 import os
 import sys
@@ -18,6 +18,23 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 from app.models.predict import predict_sentiment, batch_predict, get_available_models
 from app.data.database import save_sentiment
 from app.utils.config import MODEL_API_PORT
+
+# Check for expanded model
+EXPANDED_MODEL_PATH = os.path.join(os.path.dirname(__file__), "../models/expanded_sentiment_model.pkl")
+EXPANDED_VECTORIZER_PATH = os.path.join("app/models", "expanded_vectorizer.pkl")
+EXPANDED_MODEL_AVAILABLE = os.path.exists(EXPANDED_MODEL_PATH) and os.path.exists(EXPANDED_VECTORIZER_PATH)
+if EXPANDED_MODEL_AVAILABLE:
+    logging.info(f"Expanded model found at {EXPANDED_MODEL_PATH}")
+else:
+    logging.warning(f"Expanded model file not found at {EXPANDED_MODEL_PATH}")
+
+# Check for ensemble model
+ENSEMBLE_MODEL_PATH = os.path.join(os.path.dirname(__file__), "../models/ensemble_sentiment_model.pkl")
+ENSEMBLE_MODEL_AVAILABLE = os.path.exists(ENSEMBLE_MODEL_PATH)
+if ENSEMBLE_MODEL_AVAILABLE:
+    logging.info(f"Ensemble model found at {ENSEMBLE_MODEL_PATH}")
+else:
+    logging.warning(f"Ensemble model file not found at {ENSEMBLE_MODEL_PATH}")
 
 # Import domain-aware model components if available
 try:
@@ -93,11 +110,21 @@ def list_models():
     if DOMAIN_AWARE_AVAILABLE and "domain_aware" not in available_models:
         available_models.append("domain_aware")
     
+    # Add expanded model if available
+    if EXPANDED_MODEL_AVAILABLE and "expanded" not in available_models:
+        available_models.append("expanded")
+    
+    # Add ensemble model if available
+    if ENSEMBLE_MODEL_AVAILABLE and "ensemble" not in available_models:
+        available_models.append("ensemble")
+    
     return jsonify({
         "models": available_models,
         "count": len(available_models),
-        "default": "domain_aware" if "domain_aware" in available_models else 
-                  ("synthetic" if "synthetic" in available_models else 
+        "default": "ensemble" if "ensemble" in available_models else
+                  "domain_aware" if "domain_aware" in available_models else 
+                  ("expanded" if "expanded" in available_models else 
+                   "synthetic" if "synthetic" in available_models else 
                    available_models[0] if available_models else None)
     })
 
@@ -127,14 +154,25 @@ def predict():
         if DOMAIN_AWARE_AVAILABLE and "domain_aware" not in available_models:
             available_models.append("domain_aware")
             
+        # Add expanded model if available
+        if EXPANDED_MODEL_AVAILABLE and "expanded" not in available_models:
+            available_models.append("expanded")
+            
+        # Add ensemble model if available
+        if ENSEMBLE_MODEL_AVAILABLE and "ensemble" not in available_models:
+            available_models.append("ensemble")
+            
         if not available_models:
             return jsonify({"error": "No models available"}), 500
             
         if 'model_type' in data and data['model_type'] in available_models:
             model_type = data['model_type']
         else:
-            model_type = "domain_aware" if DOMAIN_AWARE_AVAILABLE else (
+            model_type = "ensemble" if ENSEMBLE_MODEL_AVAILABLE else (
+                "domain_aware" if DOMAIN_AWARE_AVAILABLE else (
+                "expanded" if EXPANDED_MODEL_AVAILABLE else 
                 "synthetic" if "synthetic" in available_models else available_models[0]
+                )
             )
             
         logger.info(f"Using model type: {model_type}")
@@ -472,13 +510,13 @@ def predict_sample():
 @app.route('/compare', methods=['POST'])
 def compare_models():
     """
-    Endpoint for comparing predictions from multiple models on the same text.
+    Endpoint for comparing sentiment predictions across multiple models.
     
     Request Body:
         JSON with 'text' field
         
     Returns:
-        JSON with prediction results from all available models
+        JSON with predictions from all available models
     """
     try:
         data = request.get_json()
@@ -487,37 +525,56 @@ def compare_models():
             return jsonify({"error": "Missing 'text' field in request"}), 400
         
         text = data['text']
+        
+        # Get available models
         available_models = get_available_models()
+        
+        # Add domain-aware model if available
+        if DOMAIN_AWARE_AVAILABLE and "domain_aware" not in available_models:
+            available_models.append("domain_aware")
+            
+        # Add expanded model if available
+        if EXPANDED_MODEL_AVAILABLE and "expanded" not in available_models:
+            available_models.append("expanded")
         
         if not available_models:
             return jsonify({"error": "No models available"}), 500
         
-        # Get predictions from all models
+        # Get predictions from each model
         results = {}
         for model_type in available_models:
-            sentiment_value, sentiment_label, confidence, model_used = predict_sentiment(text, model_type)
-            
-            result = {
-                "sentiment": sentiment_label,
-                "sentiment_value": int(sentiment_value),
-                "confidence": float(confidence)
-            }
-            
-            # Add model_used for hybrid model
-            if model_type == "hybrid" and model_used:
-                result["model_used"] = model_used
+            if model_type == "domain_aware" and DOMAIN_AWARE_AVAILABLE:
+                # Use domain-aware model
+                prediction = predict_domain_aware_sentiment(text)
+                results[model_type] = {
+                    "sentiment": prediction["sentiment"],
+                    "sentiment_value": prediction["sentiment_value"],
+                    "confidence": prediction["confidence"],
+                    "domains": prediction.get("domains", ["unknown"])
+                }
+            else:
+                # Use standard model
+                sentiment_value, sentiment_label, confidence, model_used = predict_sentiment(text, model_type)
+                results[model_type] = {
+                    "sentiment": sentiment_label,
+                    "sentiment_value": int(sentiment_value),
+                    "confidence": float(confidence)
+                }
                 
-            results[model_type] = result
+                # Add model_used for hybrid model
+                if model_type == "hybrid" and model_used:
+                    results[model_type]["model_used"] = model_used
         
+        # Return all results
         return jsonify({
             "text": text,
             "models": results,
-            "available_models": available_models
+            "count": len(results)
         })
-        
+    
     except Exception as e:
-        logger.error(f"Error in compare models endpoint: {str(e)}")
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+        logger.error(f"Error comparing models: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('MODEL_API_PORT', MODEL_API_PORT))
