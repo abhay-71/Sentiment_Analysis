@@ -81,7 +81,7 @@ def display_sentiment_summary(platform=None):
     
     # Create pie chart for sentiment distribution
     if total > 0 and (positive > 0 or neutral > 0 or negative > 0):
-        fig, ax = plt.subplots(figsize=(5, 5))
+        fig, ax = plt.subplots(figsize=(3, 3))
         sentiment_labels = ['Positive', 'Neutral', 'Negative']
         sentiment_values = [positive, neutral, negative]
         sentiment_colors = ['#4CAF50', '#FFC107', '#F44336']
