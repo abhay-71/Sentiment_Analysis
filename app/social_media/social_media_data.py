@@ -53,29 +53,37 @@ def display_sentiment_summary(platform=None):
     days = st.session_state.get("time_range", 30)
     stats = get_sentiment_stats(platform=platform, days=days)
     
+    # Log stats for debugging
+    logger.info(f"Sentiment stats: {stats}")
+    
     # Create columns for the stats
     col1, col2, col3, col4 = st.columns(4)
     
+    total = stats.get("total", 0)
+    positive = stats.get("positive", 0) 
+    neutral = stats.get("neutral", 0)
+    negative = stats.get("negative", 0)
+    
     with col1:
-        st.metric("Total Posts", stats["total"])
+        st.metric("Total Posts", total)
     
     with col2:
-        positive_pct = f"{(stats['positive'] / stats['total'] * 100):.1f}%" if stats["total"] > 0 else "0%"
-        st.metric("Positive", stats["positive"], positive_pct)
+        positive_pct = f"{(positive / total * 100):.1f}%" if total > 0 else "0%"
+        st.metric("Positive", positive, positive_pct)
     
     with col3:
-        neutral_pct = f"{(stats['neutral'] / stats['total'] * 100):.1f}%" if stats["total"] > 0 else "0%"
-        st.metric("Neutral", stats["neutral"], neutral_pct)
+        neutral_pct = f"{(neutral / total * 100):.1f}%" if total > 0 else "0%"
+        st.metric("Neutral", neutral, neutral_pct)
     
     with col4:
-        negative_pct = f"{(stats['negative'] / stats['total'] * 100):.1f}%" if stats["total"] > 0 else "0%"
-        st.metric("Negative", stats["negative"], negative_pct)
+        negative_pct = f"{(negative / total * 100):.1f}%" if total > 0 else "0%"
+        st.metric("Negative", negative, negative_pct)
     
     # Create pie chart for sentiment distribution
-    if stats["total"] > 0:
+    if total > 0 and (positive > 0 or neutral > 0 or negative > 0):
         fig, ax = plt.subplots(figsize=(5, 5))
         sentiment_labels = ['Positive', 'Neutral', 'Negative']
-        sentiment_values = [stats['positive'], stats['neutral'], stats['negative']]
+        sentiment_values = [positive, neutral, negative]
         sentiment_colors = ['#4CAF50', '#FFC107', '#F44336']
         
         ax.pie(
@@ -100,6 +108,9 @@ def display_platform_comparison():
     days = st.session_state.get("time_range", 30)
     platform_stats = get_sentiment_by_platform(days=days)
     
+    # Log for debugging
+    logger.info(f"Platform stats: {platform_stats}")
+    
     if not platform_stats:
         st.info("No platform data available for comparison.")
         return
@@ -110,24 +121,37 @@ def display_platform_comparison():
     counts = []
     
     for platform in platform_stats:
+        # Get values with safe defaults
+        platform_name = platform.get("platform", "unknown")
+        total = platform.get("total", 0)
+        
         # Skip platforms with no data
-        if platform["total"] == 0:
+        if total == 0:
             continue
             
+        # Get sentiment counts with safe defaults
+        positive = platform.get("positive", 0)
+        neutral = platform.get("neutral", 0)
+        negative = platform.get("negative", 0)
+            
         # Positive sentiment
-        platforms.append(platform["platform"])
+        platforms.append(platform_name)
         sentiments.append("Positive")
-        counts.append(platform["positive"])
+        counts.append(positive)
         
         # Neutral sentiment
-        platforms.append(platform["platform"])
+        platforms.append(platform_name)
         sentiments.append("Neutral")
-        counts.append(platform["neutral"])
+        counts.append(neutral)
         
         # Negative sentiment
-        platforms.append(platform["platform"])
+        platforms.append(platform_name)
         sentiments.append("Negative")
-        counts.append(platform["negative"])
+        counts.append(negative)
+    
+    if not platforms:  # If no data after filtering
+        st.info("No sentiment data available for comparison.")
+        return
     
     # Create DataFrame
     df = pd.DataFrame({
@@ -159,18 +183,27 @@ def display_platform_comparison():
     # Convert to a more readable format
     table_data = []
     for platform in platform_stats:
-        total = platform["total"]
+        platform_name = platform.get("platform", "unknown")
+        total = platform.get("total", 0)
+        
         if total > 0:
+            positive = platform.get("positive", 0)
+            neutral = platform.get("neutral", 0)
+            negative = platform.get("negative", 0)
+            
             table_data.append({
-                "Platform": platform["platform"].title(),
+                "Platform": platform_name.title(),
                 "Total Posts": total,
-                "Positive": f"{platform['positive']} ({platform['positive']/total*100:.1f}%)",
-                "Neutral": f"{platform['neutral']} ({platform['neutral']/total*100:.1f}%)",
-                "Negative": f"{platform['negative']} ({platform['negative']/total*100:.1f}%)"
+                "Positive": f"{positive} ({positive/total*100:.1f}%)",
+                "Neutral": f"{neutral} ({neutral/total*100:.1f}%)",
+                "Negative": f"{negative} ({negative/total*100:.1f}%)"
             })
     
     # Display table
-    st.table(pd.DataFrame(table_data))
+    if table_data:
+        st.table(pd.DataFrame(table_data))
+    else:
+        st.info("No platform sentiment data available.")
 
 def display_post_feed(platform=None):
     """Display social media posts feed with sentiment"""
@@ -192,8 +225,36 @@ def display_post_feed(platform=None):
     # Format timestamp
     df['formatted_time'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
     
+    # Debug: Show sentiment values in console (more detailed)
+    logger.info(f"DataFrame columns: {df.columns.tolist()}")
+    if 'sentiment' in df.columns:
+        logger.info(f"Sentiment values: {df['sentiment'].tolist()[:10]}")
+        logger.info(f"Sentiment value types: {[type(x).__name__ for x in df['sentiment'].tolist()[:5]]}")
+    else:
+        logger.warning("No sentiment column in DataFrame")
+    
     # Add sentiment emoji
-    def get_sentiment_emoji(sentiment):
+    def get_sentiment_emoji(sentiment_val):
+        # Debug the input value
+        logger.info(f"get_sentiment_emoji input: {sentiment_val}, type: {type(sentiment_val).__name__}")
+        
+        # Handle different input types
+        sentiment = None
+        
+        # Check for NaN values (which can't be converted to int)
+        if isinstance(sentiment_val, float) and pd.isna(sentiment_val):
+            logger.info(f"Detected NaN value, returning Unknown")
+            return "❓ Unknown"
+        
+        # Try to convert to integer
+        if sentiment_val is not None:
+            try:
+                sentiment = int(float(sentiment_val))
+            except (ValueError, TypeError):
+                logger.warning(f"Failed to convert sentiment: {sentiment_val}")
+                pass
+        
+        # Map integer values to text
         if sentiment == 1:
             return "😊 Positive"
         elif sentiment == 0:
@@ -206,6 +267,7 @@ def display_post_feed(platform=None):
     # Handle case where sentiment column might not exist
     if 'sentiment' not in df.columns:
         df['sentiment'] = None
+        logger.warning("Adding empty sentiment column to DataFrame")
     
     df['sentiment_display'] = df['sentiment'].apply(get_sentiment_emoji)
     
@@ -225,8 +287,27 @@ def display_post_feed(platform=None):
     # Display posts
     for i, post in df.iterrows():
         with st.expander(f"{post['platform_display']} - {post['author']} - {post['formatted_time']}"):
-            # Post content with sentiment badge
-            sentiment = post.get('sentiment')
+            # Get sentiment value with extensive error handling
+            sentiment = None
+            
+            # Add debug info
+            if 'sentiment' in post:
+                logger.info(f"Post {i} sentiment: {post['sentiment']}, type: {type(post['sentiment']).__name__}")
+            
+            try:
+                raw_sentiment = post.get('sentiment')
+                # Check for NaN values
+                if isinstance(raw_sentiment, float) and pd.isna(raw_sentiment):
+                    logger.info(f"Skipping NaN sentiment value for post {i}")
+                elif raw_sentiment is not None:
+                    if isinstance(raw_sentiment, (int, float)):
+                        sentiment = int(raw_sentiment)
+                    elif isinstance(raw_sentiment, str) and raw_sentiment.strip():
+                        sentiment = int(float(raw_sentiment))
+            except (ValueError, TypeError) as e:
+                logger.error(f"Error processing sentiment for post {i}: {e}")
+            
+            # Select color based on sentiment
             sentiment_color = {
                 1: "background-color: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px;",
                 0: "background-color: #FFC107; color: black; padding: 2px 6px; border-radius: 3px;",

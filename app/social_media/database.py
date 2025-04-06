@@ -396,46 +396,55 @@ def get_posts(platform=None, limit=100, offset=0, with_sentiment=True):
     try:
         cursor = conn.cursor()
         
-        # Construct base query
+        # Construct the query - use different JOIN based on with_sentiment flag
         base_query = """
-        SELECT p.id, p.post_id, p.platform, p.content, p.author, p.timestamp, 
-               p.url, p.engagement_count
+        SELECT 
+            p.id, 
+            p.post_id, 
+            p.platform, 
+            p.content, 
+            p.author, 
+            p.timestamp, 
+            p.url, 
+            p.engagement_count
         """
         
         # Add sentiment columns if requested
         if with_sentiment:
             base_query += """,
-                s.sentiment, s.confidence, s.model_name
+            s.sentiment, 
+            s.confidence, 
+            s.model_name
             """
             
-        # Base FROM and JOIN
         base_query += """
         FROM social_media_posts p
         """
         
-        # Add sentiment join if requested
+        # Use appropriate JOIN based on whether we want sentiment data
         if with_sentiment:
+            # Use INNER JOIN to only include posts with sentiment data
             base_query += """
-            LEFT JOIN social_media_sentiment s ON p.id = s.post_id
+            INNER JOIN social_media_sentiment s ON p.id = s.post_id
             """
         
         # Add platform filter if specified
         where_clause = ""
         params = []
-        
         if platform:
-            where_clause = "WHERE p.platform = ?"
+            where_clause = " WHERE p.platform = ? "
             params.append(platform)
         
         # Complete the query
-        query = f"""
-        {base_query}
-        {where_clause}
+        query = base_query + where_clause + """
         ORDER BY p.timestamp DESC
         LIMIT ? OFFSET ?
         """
         
         params.extend([limit, offset])
+        
+        # Log the query for debugging
+        logger.info(f"Getting posts with query: {query}, params: {params}")
         
         # Execute query
         cursor.execute(query, params)
@@ -444,6 +453,8 @@ def get_posts(platform=None, limit=100, offset=0, with_sentiment=True):
         posts = []
         for row in cursor.fetchall():
             row_dict = row_to_dict(row)
+            
+            # Create post dictionary with base fields
             post_dict = {
                 "db_id": row_dict["id"],
                 "post_id": row_dict["post_id"],
@@ -451,17 +462,31 @@ def get_posts(platform=None, limit=100, offset=0, with_sentiment=True):
                 "content": row_dict["content"],
                 "author": row_dict["author"],
                 "timestamp": row_dict["timestamp"],
-                "url": row_dict["url"],
-                "engagement_count": row_dict["engagement_count"]
+                "url": row_dict.get("url", ""),
+                "engagement_count": row_dict.get("engagement_count", 0)
             }
             
             # Add sentiment data if available
-            if with_sentiment and "sentiment" in row_dict and row_dict["sentiment"] is not None:
-                post_dict["sentiment"] = row_dict["sentiment"]
-                post_dict["sentiment_confidence"] = row_dict["confidence"]
-                post_dict["sentiment_model"] = row_dict["model_name"]
+            if with_sentiment:
+                try:
+                    sentiment_value = row_dict["sentiment"]
+                    post_dict["sentiment"] = int(sentiment_value)
+                    post_dict["sentiment_confidence"] = float(row_dict["confidence"]) if row_dict["confidence"] is not None else None
+                    post_dict["sentiment_model"] = row_dict["model_name"]
+                    
+                    # Log for debugging
+                    logger.debug(f"Added sentiment {sentiment_value} to post {post_dict['post_id']}")
+                except (ValueError, TypeError, KeyError) as e:
+                    logger.error(f"Error adding sentiment data: {str(e)}")
             
             posts.append(post_dict)
+        
+        # Log post count and sample for debugging
+        logger.info(f"Retrieved {len(posts)} posts")
+        if len(posts) > 0:
+            sample_post = posts[0]
+            has_sentiment = 'sentiment' in sample_post
+            logger.info(f"Sample post has sentiment: {has_sentiment}, value: {sample_post.get('sentiment', 'N/A')}")
         
         return posts
     
@@ -486,29 +511,28 @@ def get_sentiment_stats(platform=None, days=30):
     try:
         cursor = conn.cursor()
         
-        # First check if we have any posts
-        post_query = "SELECT COUNT(*) as count FROM social_media_posts"
+        # First check if we have any posts with sentiment data (without time filter)
+        sentiment_query = """
+        SELECT COUNT(*) as count 
+        FROM social_media_posts p
+        INNER JOIN social_media_sentiment s ON p.id = s.post_id
+        """
+        
         params = []
         
+        # Add platform filter if specified
         if platform:
-            post_query += " WHERE platform = ?"
+            sentiment_query += " WHERE p.platform = ? "
             params.append(platform)
             
-        cursor.execute(post_query, params)
-        post_count = cursor.fetchone()["count"]
+        # Execute the query without time filter to check if any data exists at all
+        cursor.execute(sentiment_query, params)
+        sentiment_count = cursor.fetchone()["count"]
         
-        if post_count == 0:
+        if sentiment_count == 0:
             return {"positive": 0, "neutral": 0, "negative": 0, "total": 0}
-            
-        # Check for sentiment data
-        sent_query = "SELECT COUNT(*) as count FROM social_media_sentiment"
-        cursor.execute(sent_query)
-        sent_count = cursor.fetchone()["count"]
         
-        if sent_count == 0:
-            return {"positive": 0, "neutral": 0, "negative": 0, "total": post_count}
-        
-        # Construct query with filters - Use LEFT JOIN to include posts without sentiment
+        # Construct query to get sentiment statistics - use INNER JOIN to count only posts with sentiment
         query = """
         SELECT 
             COUNT(CASE WHEN s.sentiment = 1 THEN 1 END) as positive,
@@ -516,32 +540,62 @@ def get_sentiment_stats(platform=None, days=30):
             COUNT(CASE WHEN s.sentiment = -1 THEN 1 END) as negative,
             COUNT(p.id) as total
         FROM social_media_posts p
-        LEFT JOIN social_media_sentiment s ON p.id = s.post_id
-        WHERE 1=1
+        INNER JOIN social_media_sentiment s ON p.id = s.post_id
         """
         
         params = []
+        where_added = False
         
         # Add platform filter if specified
         if platform:
-            query += " AND p.platform = ?"
+            query += " WHERE p.platform = ?"
             params.append(platform)
+            where_added = True
         
-        # Add time filter
+        # Add time filter ONLY if days is reasonable and data exists within that timeframe
         if days > 0:
-            query += " AND p.timestamp >= datetime('now', ? || ' days')"
-            params.append(f"-{days}")
+            # Check if we actually have data in the time range
+            time_check_query = """
+            SELECT COUNT(*) as count 
+            FROM social_media_posts p
+            INNER JOIN social_media_sentiment s ON p.id = s.post_id
+            WHERE p.timestamp >= datetime('now', ? || ' days')
+            """
+            if platform:
+                time_check_query += " AND p.platform = ?"
+                time_check_params = [f"-{days}", platform]
+            else:
+                time_check_params = [f"-{days}"]
+                
+            cursor.execute(time_check_query, time_check_params)
+            time_filtered_count = cursor.fetchone()["count"]
+            
+            # Only add time filter if we have data within this timeframe
+            if time_filtered_count > 0:
+                if where_added:
+                    query += " AND"
+                else:
+                    query += " WHERE"
+                    where_added = True
+                    
+                query += " p.timestamp >= datetime('now', ? || ' days')"
+                params.append(f"-{days}")
         
         # Execute query
         cursor.execute(query, params)
         
         row = cursor.fetchone()
+        row_dict = row_to_dict(row)
+        
         stats = {
-            "positive": row["positive"] or 0,
-            "neutral": row["neutral"] or 0,
-            "negative": row["negative"] or 0,
-            "total": row["total"] or 0
+            "positive": row_dict.get("positive", 0) or 0,
+            "neutral": row_dict.get("neutral", 0) or 0,
+            "negative": row_dict.get("negative", 0) or 0,
+            "total": row_dict.get("total", 0) or 0
         }
+        
+        # Log for debugging
+        logger.info(f"Sentiment stats (final): {stats}")
         
         return stats
     
@@ -565,23 +619,33 @@ def get_sentiment_by_platform(days=30):
     try:
         cursor = conn.cursor()
         
-        # First check if we have any posts
-        post_query = "SELECT COUNT(*) as count FROM social_media_posts"
-        cursor.execute(post_query)
-        post_count = cursor.fetchone()["count"]
+        # Check if we have any posts with sentiment data (without time filter)
+        sentiment_query = """
+        SELECT COUNT(*) as count 
+        FROM social_media_posts p
+        INNER JOIN social_media_sentiment s ON p.id = s.post_id
+        """
+            
+        cursor.execute(sentiment_query)
+        sentiment_count = cursor.fetchone()["count"]
         
-        if post_count == 0:
+        if sentiment_count == 0:
             return []
         
-        # Get all platforms
-        platform_query = "SELECT DISTINCT platform FROM social_media_posts"
+        # Get all platforms that have sentiment data (without time filter)
+        platform_query = """
+        SELECT DISTINCT p.platform 
+        FROM social_media_posts p
+        INNER JOIN social_media_sentiment s ON p.id = s.post_id
+        """
+            
         cursor.execute(platform_query)
-        platforms = [row["platform"] for row in cursor.fetchall()]
+        platforms = [row_to_dict(row)["platform"] for row in cursor.fetchall()]
         
         if not platforms:
             return []
             
-        # Construct query with LEFT JOIN to include posts without sentiment
+        # Construct query with INNER JOIN to only include posts with sentiment
         query = """
         SELECT 
             p.platform,
@@ -590,15 +654,27 @@ def get_sentiment_by_platform(days=30):
             COUNT(CASE WHEN s.sentiment = -1 THEN 1 END) as negative,
             COUNT(p.id) as total
         FROM social_media_posts p
-        LEFT JOIN social_media_sentiment s ON p.id = s.post_id
+        INNER JOIN social_media_sentiment s ON p.id = s.post_id
         """
         
         params = []
         
-        # Add time filter
+        # Add time filter ONLY if days is reasonable and data exists within that timeframe
         if days > 0:
-            query += " WHERE p.timestamp >= datetime('now', ? || ' days')"
-            params.append(f"-{days}")
+            # Check if we actually have data in the time range
+            time_check_query = """
+            SELECT COUNT(*) as count 
+            FROM social_media_posts p
+            INNER JOIN social_media_sentiment s ON p.id = s.post_id
+            WHERE p.timestamp >= datetime('now', ? || ' days')
+            """
+            cursor.execute(time_check_query, [f"-{days}"])
+            time_filtered_count = cursor.fetchone()["count"]
+            
+            # Only add time filter if we have data within this timeframe
+            if time_filtered_count > 0:
+                query += " WHERE p.timestamp >= datetime('now', ? || ' days')"
+                params.append(f"-{days}")
         
         # Group by platform
         query += " GROUP BY p.platform"
@@ -608,13 +684,17 @@ def get_sentiment_by_platform(days=30):
         
         results = []
         for row in cursor.fetchall():
+            row_dict = row_to_dict(row)
             results.append({
-                "platform": row["platform"],
-                "positive": row["positive"] or 0,
-                "neutral": row["neutral"] or 0,
-                "negative": row["negative"] or 0,
-                "total": row["total"] or 0
+                "platform": row_dict["platform"],
+                "positive": row_dict.get("positive", 0) or 0,
+                "neutral": row_dict.get("neutral", 0) or 0,
+                "negative": row_dict.get("negative", 0) or 0,
+                "total": row_dict.get("total", 0) or 0
             })
+        
+        # Log for debugging
+        logger.info(f"Platform sentiment stats (final): {results}")
         
         return results
     
