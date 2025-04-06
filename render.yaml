@@ -11,9 +11,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f
 
   # Model API Service
   - name: sentiment-model-api
@@ -32,9 +30,7 @@ services:
           type: web
           property: host
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f
 
   # Main Dashboard Service
   - name: sentiment-dashboard
@@ -56,9 +52,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f
 
   # Social Media Batch Processor
   - name: sentiment-social-processor
@@ -75,9 +69,7 @@ services:
           type: web
           property: host
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f
 
   # Social Media Authentication UI
   - name: sentiment-social-auth
@@ -91,9 +83,7 @@ services:
       - key: PORT
         value: 10002
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f
 
   # Social Media Data Visualization
   - name: sentiment-social-data
@@ -112,9 +102,7 @@ services:
           type: web
           property: host
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f
 
   # CSV Data Upload Page
   - name: sentiment-csv-upload
@@ -133,10 +121,4 @@ services:
           type: web
           property: host
       - key: DATABASE_URL
-        fromDatabase:
-          name: sentiment-analysis-db
-          property: connectionString
-
-databases:
-  - name: sentiment-analysis-db
-    plan: free 
+        value: postgresql://sentiment_analysis_db_hw4f_user:KbWDg0krIIeSvBWG7r6qLexLWrAinfcA@dpg-cvp8433e5dus73cc808g-a/sentiment_analysis_db_hw4f 
